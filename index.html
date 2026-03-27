@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BioX Lab - Panel Profesional Clinostato v2.0</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+</head>
+<body>
+
+<div id="loader">
+    <div class="loader-content">
+        <h2 class="logo-text">BioX Lab</h2>
+        <div class="loading-bar"><div class="progress"></div></div>
+        <p>Iniciando Sistema de Monitoreo...</p>
+    </div>
+</div>
+
+<div id="main-content" style="display:none;">
+    <header>
+        <div class="header-info">
+            <h1>Clinostato <span class="version">v2.0</span></h1>
+            <p>Módulo de Monitoreo Biomédico para Investigadores</p>
+        </div>
+    </header>
+
+    <div class="top-bar">
+        <button class="btn-panic" id="panicButton">
+            <i>⚠️</i> STOP / PARO DE EMERGENCIA
+        </button>
+    </div>
+
+    <div class="grid-container">
+        <div class="card control-card">
+            <div class="card-header">
+                <h3>Control de Servomotores</h3>
+                <span class="status-badge sync">SINCRONIZADO</span>
+            </div>
+            
+            <div class="motor-module">
+                <label class="sensor-label">Motor A (Eje X) - Rotación Principal</label>
+                <div class="control-precision-group">
+                    <input type="range" id="sliderA" min="1" max="10" step="0.1" value="5.0">
+                    <input type="number" id="numA" min="1" max="10" step="0.1" value="5.0">
+                    <span class="unit">RPM</span>
+                </div>
+                <div class="rpm-display" id="valA">5.0 RPM</div>
+            </div>
+
+            <div class="motor-module">
+                <label class="sensor-label">Motor B (Eje Y) - Eje Secundario</label>
+                <div class="control-precision-group">
+                    <input type="range" id="sliderB" min="1" max="10" step="0.1" value="5.0">
+                    <input type="number" id="numB" min="1" max="10" step="0.1" value="5.0">
+                    <span class="unit">RPM</span>
+                </div>
+                <div class="rpm-display" id="valB">5.0 RPM</div>
+            </div>
+        </div>
+
+        <div class="card telemetry-card">
+            <div class="card-header">
+                <h3>Telemetría en Tiempo Real</h3>
+                <span class="status-badge ok">MONITOREANDO</span>
+            </div>
+            
+            <div class="chart-container">
+                <label class="sensor-label">Vibración Interna (G) - Estabilidad Muestra</label>
+                <canvas id="vibrationChart"></canvas>
+            </div>
+            
+            <div class="temp-module">
+                <label class="sensor-label">Temperatura Ambiente de Muestra</label>
+                <div class="temp-display-group">
+                    <span id="tempVal">24.5</span>
+                    <span class="unit-lg">°C</span>
+                    <span class="status-text ok">ESTABLE</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

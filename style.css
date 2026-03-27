@@ -1,0 +1,149 @@
+/* Colores y Estilo General */
+:root {
+    --azul-oscuro: #0A2F63;
+    --verde-medico: #23d160;
+    --rojo-emergencia: #ff3860;
+    --naranja-alerta: #f0932b;
+    --fondo: #f0f4f8;
+    --blanco: #ffffff;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--fondo);
+    margin: 0;
+    padding: 15px;
+}
+
+/* --- PANTALLA DE CARGA --- */
+#loader {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: var(--azul-oscuro);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    z-index: 9999;
+    text-align: center;
+    transition: opacity 0.5s ease;
+}
+
+.loading-bar {
+    width: 250px;
+    height: 10px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50px;
+    margin: 20px auto;
+    overflow: hidden;
+}
+
+.progress {
+    width: 0%;
+    height: 100%;
+    background: var(--verde-medico);
+    animation: load 3s forwards;
+}
+
+@keyframes load {
+    to { width: 100%; }
+}
+
+/* --- DISEÑO DEL PANEL --- */
+header {
+    background-color: var(--azul-oscuro);
+    color: white;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+header h1 { margin: 0; font-size: 1.8rem; }
+.version { font-size: 0.8rem; background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 20px; }
+
+/* Botón de Pánico */
+.btn-panic {
+    background-color: var(--rojo-emergencia);
+    color: white;
+    width: 100%;
+    padding: 18px;
+    border: none;
+    border-radius: 12px;
+    font-weight: bold;
+    font-size: 1.2rem;
+    cursor: pointer;
+    margin-bottom: 20px;
+    transition: 0.3s;
+}
+
+.btn-panic:hover { background-color: #d63050; }
+
+/* El Grid (Las dos columnas) */
+.grid-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.card {
+    background: var(--blanco);
+    padding: 20px;
+    border-radius: 16px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+}
+
+/* Controles de los Motores */
+.control-precision-group {
+    background: #f8fafd;
+    padding: 15px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin: 10px 0;
+}
+
+input[type=range] { flex-grow: 1; cursor: pointer; }
+input[type=number] { width: 60px; padding: 5px; font-weight: bold; text-align: center; }
+
+.rpm-display {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: var(--azul-oscuro);
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* Telemetría y Gráfica */
+.chart-container {
+    height: 250px;
+    margin-bottom: 20px;
+}
+
+.temp-module {
+    text-align: center;
+    background: #fffaf5;
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid #ffe8cc;
+}
+
+.temp-display-group {
+    font-size: 3rem;
+    font-weight: bold;
+    color: var(--naranja-alerta);
+}
+
+.status-text.ok { color: var(--verde-medico); font-size: 0.9rem; font-weight: bold; display: block; }
+.sensor-label { font-weight: bold; color: #666; font-size: 0.8rem; text-transform: uppercase; }
