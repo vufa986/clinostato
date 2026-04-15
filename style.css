@@ -1,149 +1,219 @@
-/* Colores y Estilo General */
+/* Esto evita que los paddings rompan el ancho del 100% */
+* {
+    box-sizing: border-box;
+}
+
 :root {
-    --azul-oscuro: #0A2F63;
-    --verde-medico: #23d160;
-    --rojo-emergencia: #ff3860;
-    --naranja-alerta: #f0932b;
-    --fondo: #f0f4f8;
-    --blanco: #ffffff;
+    --bg: #080b12;
+    --glass: rgba(255, 255, 255, 0.03);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --neon-cyan: #00f2ff;
+    --neon-green: #39ff14;
+    --neon-red: #ff003c;
+    --text: #e0e0e0;
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: var(--fondo);
+    background: var(--bg);
+    background-image: radial-gradient(circle at top right, #1a1f35, transparent);
+    color: var(--text);
+    font-family: 'Inter', 'Segoe UI', sans-serif;
     margin: 0;
-    padding: 15px;
+    overflow-x: hidden;
+    height: 100vh;
 }
 
-/* --- PANTALLA DE CARGA --- */
+/* --- LOADER --- */
 #loader {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: var(--azul-oscuro);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    color: white;
-    z-index: 9999;
-    text-align: center;
-    transition: opacity 0.5s ease;
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    z-index: 10000; transition: 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.loading-bar {
-    width: 250px;
-    height: 10px;
-    background: rgba(255,255,255,0.1);
-    border-radius: 50px;
-    margin: 20px auto;
-    overflow: hidden;
+/* ESTILOS PARA EL LOGO DEL LOADER (CENTRAL) CON ZOOM EXPANSIVO */
+.loader-logo {
+    width: 350px;
+    max-width: 80%;
+    height: auto;
+    margin: 20px 0;
+    mix-blend-mode: screen; 
+    filter: drop-shadow(0 0 10px rgba(0, 242, 255, 0.3));
+    
+    /* Animación de expansión progresiva (3 segundos) */
+    animation: logoExpansion 3s ease-in-out forwards; 
 }
 
-.progress {
-    width: 0%;
-    height: 100%;
-    background: var(--verde-medico);
-    animation: load 3s forwards;
+/* --- ANIMACIÓN: LOGO PRESENTE DESDE EL INICIO Y EXPANSIÓN NÍTIDA --- */
+@keyframes logoExpansion {
+    from { 
+        opacity: 1;            /* Visible desde el inicio */
+        transform: scale(1);   /* Tamaño original */
+        filter: none;          /* Sin efectos que lo opaquen */
+    }
+    to { 
+        opacity: 1;            /* Se mantiene visible */
+        transform: scale(1.3); /* Se agranda el 30% */
+        filter: none;          /* Se mantiene nítido y sin luz de fondo */
+    }
 }
 
-@keyframes load {
-    to { width: 100%; }
-}
+.loading-bar { width: 300px; height: 2px; background: rgba(255,255,255,0.1); margin-top: 20px; border-radius: 2px; }
+.progress { width: 0%; height: 100%; background: var(--neon-cyan); box-shadow: 0 0 15px var(--neon-cyan); animation: load 3s forwards; }
 
-/* --- DISEÑO DEL PANEL --- */
+@keyframes load { to { width: 100%; } }
+
+/* --- HEADER --- */
 header {
-    background-color: var(--azul-oscuro);
-    color: white;
-    padding: 20px;
-    border-radius: 12px;
-    margin-bottom: 20px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 30px 50px;
 }
 
-header h1 { margin: 0; font-size: 1.8rem; }
-.version { font-size: 0.8rem; background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 20px; }
-
-/* Botón de Pánico */
-.btn-panic {
-    background-color: var(--rojo-emergencia);
-    color: white;
-    width: 100%;
-    padding: 18px;
-    border: none;
-    border-radius: 12px;
-    font-weight: bold;
-    font-size: 1.2rem;
-    cursor: pointer;
-    margin-bottom: 20px;
-    transition: 0.3s;
+/* ESTILO PARA EL LOGO EN LA ESQUINA IZQUIERDA */
+.header-logo {
+    height: 85px; 
+    width: auto;
+    mix-blend-mode: screen; 
+    filter: drop-shadow(0 0 8px rgba(0, 242, 255, 0.3));
+    margin-right: 10px;
 }
 
-.btn-panic:hover { background-color: #d63050; }
-
-/* El Grid (Las dos columnas) */
-.grid-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-}
-
-.card {
-    background: var(--blanco);
-    padding: 20px;
-    border-radius: 16px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-}
-
-.card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid #eee;
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-}
-
-/* Controles de los Motores */
-.control-precision-group {
-    background: #f8fafd;
-    padding: 15px;
-    border-radius: 10px;
+.brand {
     display: flex;
     align-items: center;
     gap: 15px;
-    margin: 10px 0;
 }
 
-input[type=range] { flex-grow: 1; cursor: pointer; }
-input[type=number] { width: 60px; padding: 5px; font-weight: bold; text-align: center; }
-
-.rpm-display {
-    font-size: 2.5rem;
-    font-weight: bold;
-    color: var(--azul-oscuro);
-    text-align: center;
-    margin-bottom: 20px;
+/* ESTILO PARA EL TEXTO SUPERIOR */
+.brand p { 
+    margin: 0; 
+    font-size: 0.85rem; 
+    color: #f0f0f0; 
+    text-transform: uppercase; 
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-shadow: 0 0 10px rgba(0, 242, 255, 0.4); 
 }
 
-/* Telemetría y Gráfica */
-.chart-container {
-    height: 250px;
-    margin-bottom: 20px;
+.live-indicator {
+    background: rgba(57, 255, 20, 0.1); padding: 8px 15px; border-radius: 5px;
+    color: var(--neon-green); font-size: 0.7rem; font-weight: bold;
+    display: flex; align-items: center; gap: 10px; border: 1px solid var(--neon-green);
+}
+.pulse-dot { width: 8px; height: 8px; background: var(--neon-green); border-radius: 50%; animation: pulse 1.5s infinite; }
+
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+
+/* --- GRID & CARDS --- */
+.dashboard-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 30px; padding: 0 50px;
+}
+.glass-card {
+    background: var(--glass);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    padding: 40px; border-radius: 20px; position: relative;
+}
+.card-tag {
+    position: absolute; top: -10px; left: 20px; background: var(--neon-cyan);
+    color: black; font-size: 0.6rem; font-weight: 900; padding: 2px 10px; border-radius: 3px;
 }
 
-.temp-module {
-    text-align: center;
-    background: #fffaf5;
-    padding: 15px;
-    border-radius: 12px;
-    border: 1px solid #ffe8cc;
+/* --- CONTROLS --- */
+.motor-unit { margin-bottom: 40px; }
+.motor-info { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; }
+.motor-info label { font-size: 0.8rem; color: #aaa; font-weight: bold; }
+.motor-info label small { display: block; color: #555; }
+.digital-readout { font-size: 3rem; font-weight: 900; color: white; }
+.digital-readout span { font-size: 1rem; color: var(--neon-cyan); margin-left: 10px; }
+
+.neo-control { display: flex; gap: 20px; align-items: center; }
+input[type=range] { flex-grow: 1; accent-color: var(--neon-cyan); height: 4px; cursor: pointer; }
+input[type=number] { 
+    background: transparent; border: 1px solid var(--glass-border); 
+    color: white; padding: 10px; width: 60px; text-align: center; font-weight: bold;
 }
 
-.temp-display-group {
-    font-size: 3rem;
-    font-weight: bold;
-    color: var(--naranja-alerta);
+/* --- EMERGENCY --- */
+.emergency-zone { padding: 0 50px 20px 50px; }
+.btn-panic {
+    width: 100%; padding: 20px; background: transparent; 
+    border: 1px solid var(--neon-red); color: var(--neon-red);
+    font-weight: 900; letter-spacing: 2px; cursor: pointer; transition: 0.3s;
+}
+.btn-panic:hover { background: var(--neon-red); color: white; box-shadow: 0 0 30px var(--neon-red); }
+
+/* --- TEMP --- */
+.temp-readout { margin-top: 30px; text-align: center; }
+.temp-val { font-size: 4rem; font-weight: 900; color: #ff9d00; }
+.temp-status { color: var(--neon-green); font-size: 0.7rem; letter-spacing: 2px; }
+
+/* --- FOOTER (MODIFICADO: MÁS CLARO) --- */
+footer { 
+    padding: 40px 50px; 
+    opacity: 1; /* Eliminada la opacidad de 0.3 para que sea legible */
 }
 
-.status-text.ok { color: var(--verde-medico); font-size: 0.9rem; font-weight: bold; display: block; }
-.sensor-label { font-weight: bold; color: #666; font-size: 0.8rem; text-transform: uppercase; }
+.system-data { 
+    display: flex; 
+    gap: 30px; 
+    color: #e0e0e0; /* Color gris claro/blanco para visibilidad */
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 1px;
+}
+
+/* --- NUEVOS ESTILOS PARA LA CONSOLA DE MANDO --- */
+.master-console button {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    text-transform: uppercase;
+    border-radius: 8px !important;
+}
+
+.master-console button:hover {
+    filter: brightness(1.2);
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+}
+
+#pwrBtn.active {
+    box-shadow: 0 0 25px var(--neon-green);
+    border-color: white;
+}
+
+#strBtn.active {
+    box-shadow: 0 0 25px var(--neon-cyan);
+    border-color: white;
+}
+
+/* =========================================
+    📱 RESPONSIVE DESIGN & MOBILE ADAPTATION
+   ========================================= */
+
+@media (max-width: 960px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        padding: 0 20px;
+    }
+    .glass-card { padding: 30px; }
+    header { padding: 20px; }
+    .emergency-zone { padding: 0 20px 20px 20px; }
+    footer { padding: 20px; }
+    .master-console { flex-wrap: wrap; }
+    .master-console button { min-width: 200px; }
+}
+
+@media (max-width: 600px) {
+    header {
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+    }
+    .header-logo { height: 50px; }
+    .glass-card { padding: 20px; }
+    .master-console { flex-direction: column !important; gap: 10px !important; }
+    .master-console button { width: 100%; }
+    .motor-info { flex-direction: column; align-items: flex-start; gap: 5px; }
+    .digital-readout { font-size: 2.2rem; }
+    .neo-control { gap: 10px; }
+    .temp-val { font-size: 3rem; }
+    .system-data { flex-direction: column; gap: 10px; align-items: center; text-align: center; }
+}

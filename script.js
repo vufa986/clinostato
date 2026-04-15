@@ -1,122 +1,186 @@
-// Asegurar que el DOM esté cargado
 document.addEventListener('DOMContentLoaded', () => {
-    
-    // --- 1. GESTIÓN DE PANTALLA DE CARGA (PRO) ---
     const loader = document.getElementById('loader');
-    const mainContent = document.getElementById('main-content');
+    const main = document.getElementById('main-content');
+    
+    // Estados Globales
+    let isPwrOn = false;
+    let isRunOn = false;
 
-    // Esperar a que todo cargue (imágenes, librería Chart, etc.)
+    // Splash Screen
     window.addEventListener('load', () => {
         setTimeout(() => {
-            if(loader) loader.style.opacity = '0';
+            loader.style.opacity = '0';
             setTimeout(() => {
-                if(loader) loader.style.display = 'none';
-                if(mainContent) mainContent.style.display = 'block';
-            }, 500); // Duración de la transición
-        }, 3000); // 3 segundos de carga simulada para impacto visual
+                loader.style.display = 'none';
+                main.style.display = 'block';
+            }, 800);
+        }, 3000);
     });
 
-    // --- 2. SINCRONIZACIÓN DE IMPUTS MOTOR (UX MEJORADA) ---
-    function setupMotorSync(id) {
+    // --- FUNCIONES DE MANDO ---
+    window.togglePower = async () => {
+        isPwrOn = !isPwrOn;
+        const btn = document.getElementById('pwrBtn');
+        
+        btn.style.background = isPwrOn ? 'var(--neon-green)' : 'transparent';
+        btn.style.color = isPwrOn ? 'black' : 'var(--neon-green)';
+        btn.innerText = isPwrOn ? "SYSTEM POWER: ON" : "SYSTEM POWER: OFF";
+
+        if (!isPwrOn && isRunOn) {
+            isRunOn = false;
+            const btnStart = document.getElementById('strBtn');
+            btnStart.style.background = 'transparent';
+            btnStart.style.color = 'var(--neon-cyan)';
+            btnStart.innerText = "START ENGINE";
+        }
+
+        try {
+            await fetch(`http://127.0.0.1:8000/motor/power/${isPwrOn}`, { method: 'POST' });
+        } catch (e) { console.error("PLC Link Failure"); }
+    };
+
+    // MODIFICADO: Ahora inyecta la velocidad al arrancar para que el PLC reaccione
+    window.toggleStart = async () => {
+        if(!isPwrOn) {
+            alert("⚠️ SECURITY PROTOCOL: Engaging Power required first.");
+            return;
+        }
+        isRunOn = !isRunOn;
+        const btn = document.getElementById('strBtn');
+        
+        btn.style.background = isRunOn ? 'var(--neon-cyan)' : 'transparent';
+        btn.style.color = isRunOn ? 'black' : 'var(--neon-cyan)';
+        btn.innerText = isRunOn ? "ENGINE: RUNNING" : "START ENGINE";
+
+        try {
+            // 1. Mandar señal de arranque
+            await fetch(`http://127.0.0.1:8000/motor/start/${isRunOn}`, { method: 'POST' });
+
+            // 2. INYECCIÓN: Si encendemos, mandamos los valores actuales de los sliders de inmediato
+            if (isRunOn) {
+                const valA = document.getElementById('sliderA').value;
+                const valB = document.getElementById('sliderB').value;
+                await sendToPLC('A', valA);
+                await sendToPLC('B', valB);
+            }
+        } catch (e) { console.error("PLC Link Failure"); }
+    };
+
+    // --- CONTROL DE MOTORES ---
+    async function sendToPLC(motor, value) {
+        try {
+            await fetch(`http://127.0.0.1:8000/control/${motor}/${value}`, { method: 'POST' });
+        } catch (e) { console.error("Data Link Failure"); }
+    }
+
+    function updateMotorUI(id, val) {
         const slider = document.getElementById('slider' + id);
         const num = document.getElementById('num' + id);
         const display = document.getElementById('val' + id);
+        const v = parseFloat(val).toFixed(1);
         
-        // Función única de actualización
-        const update = (newVal, source) => { 
-            // Validar rango 1-10
-            if (newVal < 1) newVal = 1;
-            if (newVal > 10) newVal = 10;
-            
-            // Redondear a un decimal
-            const formattedVal = parseFloat(newVal).toFixed(1);
-            
-            // Actualizar ambos inputs solo si no son la fuente del cambio
-            if (source !== 'slider') slider.value = formattedVal;
-            if (source !== 'number') num.value = formattedVal;
-            
-            // Actualizar display grande
-            display.innerText = formattedVal + " RPM"; 
+        slider.value = v;
+        num.value = v;
+        display.innerHTML = `${v}<span>RPM</span>`;
+        return v;
+    }
+
+    function setupMotor(id) {
+        const slider = document.getElementById('slider' + id);
+        const num = document.getElementById('num' + id);
+        let timeoutId;
+
+        slider.oninput = (e) => {
+            const v = updateMotorUI(id, e.target.value);
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => sendToPLC(id, v), 200);
         };
 
-        // Eventos nativos de JS
-        slider.oninput = (e) => update(e.target.value, 'slider');
-        num.onchange = (e) => update(e.target.value, 'number'); // onchange para esperar a que termine de escribir
-    }
-
-    // Inicializar motores A y B
-    setupMotorSync('A');
-    setupMotorSync('B');
-
-    // --- 3. CONFIGURACIÓN GRÁFICA DE VIBRACIÓN (CHART.JS PRO) ---
-    const canvas = document.getElementById('vibrationChart');
-    if (canvas) {
-        const ctx = canvas.getContext('2d');
-        
-        // Gradiente para efecto visual científico
-        const gradient = ctx.createLinearGradient(0, 0, 0, 200);
-        gradient.addColorStop(0, 'rgba(255, 56, 96, 0.4)');
-        gradient.addColorStop(1, 'rgba(255, 255, 255, 0.05)');
-
-        const chart = new Chart(ctx, {
-            type: 'line',
-            data: { 
-                labels: Array(25).fill(''), 
-                datasets: [{ 
-                    label: 'Vibración (G)',
-                    data: Array(25).fill(0), 
-                    borderColor: '#ff3860', 
-                    borderWidth: 2,
-                    pointRadius: 0, // Sin puntos para que sea más limpia
-                    fill: true, 
-                    backgroundColor: gradient, // Gradiente aplicado
-                    tension: 0.4 // Línea suave (Bézier)
-                }] 
-            },
-            options: { 
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { 
-                    y: { 
-                        min: 0, max: 0.1,
-                        ticks: { color: '#7a7a7a', font: { size: 11 } },
-                        grid: { color: 'rgba(0,0,0,0.03)' }
-                    },
-                    x: { grid: { display: false } }
-                },
-                animation: false, // Desactivar animación de Chart.js para WebSockets (velocidad)
-                plugins: { legend: { display: false } } 
-            }
-        });
-
-        // --- 4. SIMULACIÓN DE TELEMETRÍA (Lo que el Backend "llenará") ---
-        setInterval(() => {
-            // Generar dato aleatorio creíble (0.01 - 0.08G)
-            const newVal = Math.random() * 0.07 + 0.01;
-            
-            // Mover la gráfica (shift + push)
-            chart.data.datasets[0].data.shift();
-            chart.data.datasets[0].data.push(newVal);
-            chart.update(); // Actualización rápida
-            
-            // Simulación Temperatura (oscila cerca de 24.5)
-            const tempValDisplay = document.getElementById('tempVal');
-            if(tempValDisplay) {
-                const temp = (24 + Math.random()).toFixed(1);
-                tempValDisplay.innerText = temp;
-            }
-        }, 500); // 500ms de refresco
-    }
-
-    // --- 5. BOTÓN DE PÁNICO Y ESTADO PLC ---
-    const panicBtn = document.getElementById('panicButton');
-    if (panicBtn) {
-        panicBtn.onclick = () => {
-            // Aquí enviarías la orden al PLC por backend
-            alert('PARO DE EMERGENCIA ACTIVADO. MOTORES DETENIDOS.');
-            // Puedes cambiar visualmente el estado del PLC aquí si la conexión cae
-            document.getElementById('plcText').innerText = 'PLC DESCONECTADO';
-            document.querySelector('.dot').style.backgroundColor = '#ff3860'; // Cambiar a rojo
+        num.onchange = (e) => {
+            const v = updateMotorUI(id, e.target.value);
+            sendToPLC(id, v);
         };
     }
+
+    setupMotor('A');
+    setupMotor('B');
+
+    // --- GRÁFICA DE VIBRACIÓN ---
+    const ctx = document.getElementById('vibrationChart').getContext('2d');
+    const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: Array(20).fill(''),
+            datasets: [{
+                data: Array(20).fill(0),
+                borderColor: '#ff003c',
+                borderWidth: 2,
+                tension: 0.4,
+                pointRadius: 0,
+                fill: true,
+                backgroundColor: 'rgba(255, 0, 60, 0.1)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { display: false, min: 0, max: 1 }, x: { display: false } },
+            plugins: { legend: { display: false } }
+        }
+    });
+
+    // --- LOOP DE TELEMETRÍA ---
+    const liveIndicator = document.querySelector('.live-indicator');
+    
+    setInterval(async () => {
+        try {
+            const res = await fetch('http://127.0.0.1:8000/telemetria');
+            if (res.ok) {
+                liveIndicator.style.border = '1px solid var(--neon-green)';
+                liveIndicator.style.color = 'var(--neon-green)';
+                liveIndicator.innerHTML = '<span class="pulse-dot"></span> LIVE TELEMETRY';
+            }
+            document.getElementById('tempVal').innerText = (24 + Math.random()).toFixed(1);
+
+            if (isRunOn) {
+                chart.data.datasets[0].data.shift();
+                chart.data.datasets[0].data.push(0.2 + Math.random() * 0.4);
+                chart.update('none');
+            }
+        } catch (e) {
+            liveIndicator.style.border = '1px solid var(--neon-red)';
+            liveIndicator.style.color = 'var(--neon-red)';
+            liveIndicator.innerHTML = '⚠️ OFFLINE';
+        }
+    }, 500);
+
+    // --- BOTÓN DE PÁNICO ---
+    document.getElementById('panicButton').onclick = async () => {
+        isRunOn = false;
+        isPwrOn = false;
+        
+        const btnStart = document.getElementById('strBtn');
+        btnStart.style.background = 'transparent';
+        btnStart.style.color = 'var(--neon-cyan)';
+        btnStart.innerText = "START ENGINE";
+        
+        const btnPwr = document.getElementById('pwrBtn');
+        btnPwr.style.background = 'transparent';
+        btnPwr.style.color = 'var(--neon-green)';
+        btnPwr.innerText = "SYSTEM POWER: OFF";
+
+        const emergencyValue = 1.0;
+        updateMotorUI('A', emergencyValue);
+        updateMotorUI('B', emergencyValue);
+
+        sendToPLC('A', emergencyValue);
+        sendToPLC('B', emergencyValue);
+        
+        try {
+            await fetch('http://127.0.0.1:8000/emergency', { method: 'POST' });
+            alert('🚨 CRITICAL HALT: V90 & S210 TERMINATED. SPEEDS RESET TO 1.0 RPM.');
+        } catch (e) {
+            alert('⚠️ EMERGENCY HALT FAILED: NO CONNECTION TO CORE.');
+        }
+    };
 });

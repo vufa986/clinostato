@@ -3,83 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BioX Lab - Panel Profesional Clinostato v2.0</title>
+    <title>NexusTech - Bio-Digital Interface</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 </head>
 <body>
 
 <div id="loader">
-    <div class="loader-content">
-        <h2 class="logo-text">BioX Lab</h2>
-        <div class="loading-bar"><div class="progress"></div></div>
-        <p>Iniciando Sistema de Monitoreo...</p>
-    </div>
+    <div class="cyber-spinner"></div>
+    <img src="img/logo_nexus.png" alt="NexusTech Logo" class="loader-logo">
+    <div class="loading-bar"><div class="progress"></div></div>
+    <p class="loader-status">Inyectando protocolos de microgravedad...</p>
 </div>
 
 <div id="main-content" style="display:none;">
     <header>
-        <div class="header-info">
-            <h1>Clinostato <span class="version">v2.0</span></h1>
-            <p>Módulo de Monitoreo Biomédico para Investigadores</p>
+        <div class="brand">
+            <img src="img/logo_nexus.png" alt="NexusTech Logo" class="header-logo">
+            <div>
+                <p>Advanced Biometric Research System</p>
+            </div>
+        </div>
+        <div class="live-indicator">
+            <span class="pulse-dot"></span>
+            LIVE TELEMETRY
         </div>
     </header>
 
-    <div class="top-bar">
-        <button class="btn-panic" id="panicButton">
-            <i>⚠️</i> STOP / PARO DE EMERGENCIA
+    <div class="emergency-zone">
+        <button class="btn-panic" id="panicButton" onclick="panicStop()">
+            TERMINATE ALL PROCESSES (EMERGENCY)
         </button>
     </div>
 
-    <div class="grid-container">
-        <div class="card control-card">
-            <div class="card-header">
-                <h3>Control de Servomotores</h3>
-                <span class="status-badge sync">SINCRONIZADO</span>
-            </div>
+    <div class="dashboard-grid">
+        <section class="glass-card">
+            <div class="card-tag">ENGINE CONTROL</div>
             
-            <div class="motor-module">
-                <label class="sensor-label">Motor A (Eje X) - Rotación Principal</label>
-                <div class="control-precision-group">
-                    <input type="range" id="sliderA" min="1" max="10" step="0.1" value="5.0">
-                    <input type="number" id="numA" min="1" max="10" step="0.1" value="5.0">
-                    <span class="unit">RPM</span>
-                </div>
-                <div class="rpm-display" id="valA">5.0 RPM</div>
+            <div class="master-console" style="display: flex; gap: 15px; margin-bottom: 30px; padding: 15px; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid var(--glass-border);">
+                <button id="pwrBtn" onclick="togglePower()" style="flex: 1; padding: 12px; background: transparent; border: 1px solid var(--neon-green); color: var(--neon-green); font-weight: 900; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s;">
+                    SYSTEM POWER: OFF
+                </button>
+                <button id="strBtn" onclick="toggleStart()" style="flex: 1; padding: 12px; background: transparent; border: 1px solid var(--neon-cyan); color: var(--neon-cyan); font-weight: 900; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s;">
+                    START ENGINE
+                </button>
             </div>
 
-            <div class="motor-module">
-                <label class="sensor-label">Motor B (Eje Y) - Eje Secundario</label>
-                <div class="control-precision-group">
-                    <input type="range" id="sliderB" min="1" max="10" step="0.1" value="5.0">
-                    <input type="number" id="numB" min="1" max="10" step="0.1" value="5.0">
-                    <span class="unit">RPM</span>
+            <div class="motor-unit">
+                <div class="motor-info">
+                    <label>AXIS X <small>Primary Rotation</small></label>
+                    <div class="digital-readout" id="valA">1.0<span>RPM</span></div>
                 </div>
-                <div class="rpm-display" id="valB">5.0 RPM</div>
+                <div class="neo-control">
+                    <input type="range" id="sliderA" min="1" max="10" step="0.1" value="1.0">
+                    <input type="number" id="numA" min="1" max="10" step="0.1" value="1.0">
+                </div>
             </div>
-        </div>
 
-        <div class="card telemetry-card">
-            <div class="card-header">
-                <h3>Telemetría en Tiempo Real</h3>
-                <span class="status-badge ok">MONITOREANDO</span>
+            <div class="motor-unit">
+                <div class="motor-info">
+                    <label>AXIS Y <small>Secondary Rotation</small></label>
+                    <div class="digital-readout" id="valB">1.0<span>RPM</span></div>
+                </div>
+                <div class="neo-control">
+                    <input type="range" id="sliderB" min="1" max="10" step="0.1" value="1.0">
+                    <input type="number" id="numB" min="1" max="10" step="0.1" value="1.0">
+                </div>
             </div>
-            
-            <div class="chart-container">
-                <label class="sensor-label">Vibración Interna (G) - Estabilidad Muestra</label>
+        </section>
+
+        <section class="glass-card">
+            <div class="card-tag">TEMPERATURE</div>
+            <div class="chart-area" style="height: 200px;">
                 <canvas id="vibrationChart"></canvas>
             </div>
             
-            <div class="temp-module">
-                <label class="sensor-label">Temperatura Ambiente de Muestra</label>
-                <div class="temp-display-group">
-                    <span id="tempVal">24.5</span>
-                    <span class="unit-lg">°C</span>
-                    <span class="status-text ok">ESTABLE</span>
-                </div>
+            <div class="temp-readout">
+                <label>CORE TEMPERATURE</label>
+                <div class="temp-val"><span id="tempVal">24.5</span>°C</div>
+                <div class="temp-status">CRYO-STABLE</div>
             </div>
-        </div>
+        </section>
     </div>
+
+    <footer>
+        <div class="system-data">
+            <span>NODE_ID: 1361886</span>
+            <span>PLC_GATEWAY: 192.168.0.1</span>
+            <span>STATUS: ENCRYPTED_LINK</span>
+        </div>
+    </footer>
 </div>
 
 <script src="script.js"></script>
