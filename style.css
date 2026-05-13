@@ -1,219 +1,172 @@
-/* Esto evita que los paddings rompan el ancho del 100% */
-* {
-    box-sizing: border-box;
-}
-
 :root {
-    --bg: #080b12;
-    --glass: rgba(255, 255, 255, 0.03);
-    --glass-border: rgba(255, 255, 255, 0.1);
-    --neon-cyan: #00f2ff;
-    --neon-green: #39ff14;
-    --neon-red: #ff003c;
+    --bg: #030712; 
+    --hud-bg: rgba(10, 15, 30, 0.6); 
+    --neon-cyan: #00f2ff; 
+    --neon-magenta: #ff007f; 
+    --neon-red: #ff1030; 
     --text: #e0e0e0;
-}
-
-body {
-    background: var(--bg);
-    background-image: radial-gradient(circle at top right, #1a1f35, transparent);
-    color: var(--text);
-    font-family: 'Inter', 'Segoe UI', sans-serif;
-    margin: 0;
-    overflow-x: hidden;
-    height: 100vh;
-}
-
-/* --- LOADER --- */
-#loader {
-    position: fixed; inset: 0; background: var(--bg);
-    display: flex; flex-direction: column; justify-content: center; align-items: center;
-    z-index: 10000; transition: 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* ESTILOS PARA EL LOGO DEL LOADER (CENTRAL) CON ZOOM EXPANSIVO */
-.loader-logo {
-    width: 350px;
-    max-width: 80%;
-    height: auto;
-    margin: 20px 0;
-    mix-blend-mode: screen; 
-    filter: drop-shadow(0 0 10px rgba(0, 242, 255, 0.3));
     
-    /* Animación de expansión progresiva (3 segundos) */
-    animation: logoExpansion 3s ease-in-out forwards; 
+    /* COLORES PARA TELEMETRÍA (FUTURISTAS) */
+    --axis-x-color: #ff6b00; /* Naranja Cyberpunk */
+    --axis-y-color: #d070ff; /* Morado Claro Neón */
 }
 
-/* --- ANIMACIÓN: LOGO PRESENTE DESDE EL INICIO Y EXPANSIÓN NÍTIDA --- */
-@keyframes logoExpansion {
-    from { 
-        opacity: 1;            /* Visible desde el inicio */
-        transform: scale(1);   /* Tamaño original */
-        filter: none;          /* Sin efectos que lo opaquen */
-    }
-    to { 
-        opacity: 1;            /* Se mantiene visible */
-        transform: scale(1.3); /* Se agranda el 30% */
-        filter: none;          /* Se mantiene nítido y sin luz de fondo */
-    }
+body { 
+    background: var(--bg); color: var(--text); font-family: 'Rajdhani', sans-serif; 
+    margin: 0; overflow-x: hidden; overflow-y: hidden; /* Evita scroll vertical indeseado */
+    background-image: linear-gradient(rgba(0, 242, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 242, 255, 0.03) 1px, transparent 1px);
+    background-size: 30px 30px;
+    user-select: none; 
 }
 
-.loading-bar { width: 300px; height: 2px; background: rgba(255,255,255,0.1); margin-top: 20px; border-radius: 2px; }
-.progress { width: 0%; height: 100%; background: var(--neon-cyan); box-shadow: 0 0 15px var(--neon-cyan); animation: load 3s forwards; }
-
-@keyframes load { to { width: 100%; } }
-
-/* --- HEADER --- */
-header {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 30px 50px;
+/* OPACIDAD AL 0.6 DEL VIDEO */
+.wallpaper-tunnnel {
+    position: fixed; inset: 0; 
+    width: 100vw; height: 100vh; 
+    object-fit: cover; z-index: -1; 
+    opacity: 0.8; 
+    pointer-events: none;
 }
 
-/* ESTILO PARA EL LOGO EN LA ESQUINA IZQUIERDA */
-.header-logo {
-    height: 85px; 
-    width: auto;
-    mix-blend-mode: screen; 
-    filter: drop-shadow(0 0 8px rgba(0, 242, 255, 0.3));
-    margin-right: 10px;
+.scanlines {
+    position: fixed; inset: 0; background: linear-gradient(to bottom, rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%);
+    background-size: 100% 4px; z-index: 9999; pointer-events: none; opacity: 0.6;
 }
 
-.brand {
-    display: flex;
-    align-items: center;
-    gap: 15px;
+#loader { 
+    position: fixed; inset: 0; background: var(--bg); z-index: 10000; 
+    display: flex; flex-direction: column; justify-content: center; align-items: center; 
 }
 
-/* ESTILO PARA EL TEXTO SUPERIOR */
-.brand p { 
-    margin: 0; 
-    font-size: 0.85rem; 
-    color: #f0f0f0; 
-    text-transform: uppercase; 
-    font-weight: 500;
-    letter-spacing: 1px;
-    text-shadow: 0 0 10px rgba(0, 242, 255, 0.4); 
+.loader-logo { 
+    width: 200px; 
+    animation: logoGrow 3s ease-in-out forwards, pulseGlow 2s infinite alternate; 
+}
+.loading-container { width: 300px; height: 4px; background: rgba(0, 242, 255, 0.1); margin-top: 40px; overflow: hidden; }
+.progress-bar { width: 0%; height: 100%; background: var(--neon-cyan); animation: loadingProgress 3s forwards; box-shadow: 0 0 15px var(--neon-cyan); }
+
+.loader-text {
+    font-size: 1rem; font-weight: 700; letter-spacing: 4px; 
+    margin-top: 15px; color: var(--neon-cyan); text-shadow: 0 0 10px var(--neon-cyan);
 }
 
-.live-indicator {
-    background: rgba(57, 255, 20, 0.1); padding: 8px 15px; border-radius: 5px;
-    color: var(--neon-green); font-size: 0.7rem; font-weight: bold;
-    display: flex; align-items: center; gap: 10px; border: 1px solid var(--neon-green);
+@keyframes logoGrow { from { transform: scale(1.3); } to { transform: scale(1.7); } }
+@keyframes pulseGlow { from { filter: drop-shadow(0 0 5px var(--neon-cyan)); } to { filter: drop-shadow(0 0 20px var(--neon-magenta)); } }
+@keyframes loadingProgress { to { width: 100%; } }
+
+/* AJUSTES DE ESPACIOS PARA QUE ENCAJE AL 100% DE ZOOM */
+header { display: flex; justify-content: space-between; padding: 15px 50px; align-items: center; }
+.header-logo { height: 50px; }
+.brand p { font-size: 0.8rem; color: var(--neon-cyan); letter-spacing: 2px; font-weight: bold; margin: 0; }
+
+/* TELEMETRÍA DINÁMICA (Verde cuando está ON, Rojo en OFF) */
+.live-indicator { font-weight: bold; display: flex; align-items: center; gap: 10px; transition: color 0.3s ease, text-shadow 0.3s ease; }
+.status-off { color: var(--neon-red) !important; text-shadow: 0 0 8px rgba(255, 16, 48, 0.6); }
+.status-off .pulse-dot { background: var(--neon-red); }
+.status-on { color: #00ff95 !important; text-shadow: 0 0 8px rgba(0, 255, 149, 0.6); }
+.status-on .pulse-dot { background: #00ff95; }
+
+.pulse-dot { width: 8px; height: 8px; border-radius: 50%; animation: blink 1s infinite; box-shadow: 0 0 6px currentColor; }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+.dashboard-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px; padding: 0 40px; }
+.hud-panel { 
+    background: var(--hud-bg); border: 1px solid rgba(0, 242, 255, 0.2); 
+    padding: 20px; position: relative; 
+    clip-path: polygon(0 15px, 15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%);
+    backdrop-filter: blur(5px);
 }
-.pulse-dot { width: 8px; height: 8px; background: var(--neon-green); border-radius: 50%; animation: pulse 1.5s infinite; }
+.panel-corners::before, .panel-corners::after { content: ''; position: absolute; width: 20px; height: 20px; border: 2px solid var(--neon-cyan); pointer-events: none; }
+.panel-corners::before { top: 0; left: 0; border-right: none; border-bottom: none; }
+.panel-corners::after { bottom: 0; right: 0; border-left: none; border-top: none; }
+.card-tag { position: absolute; top: 0; left: 30px; background: var(--neon-cyan); color: #000; font-size: 0.7rem; font-weight: 800; padding: 2px 12px; }
 
-@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+.master-console { display: flex; gap: 15px; margin: 10px 0 20px 0; }
+.master-console button { flex: 1; padding: 10px; background: rgba(0, 242, 255, 0.05); border: 1px solid var(--neon-cyan); color: var(--neon-cyan); cursor: pointer; font-family: 'Rajdhani'; font-weight: bold; text-transform: uppercase; transition: 0.3s; }
+.pwr-on { background: var(--neon-magenta) !important; color: white !important; box-shadow: 0 0 15px var(--neon-magenta); border-color: var(--neon-magenta) !important; }
+.str-on { background: var(--neon-cyan) !important; color: #000 !important; box-shadow: 0 0 15px var(--neon-cyan); }
 
-/* --- GRID & CARDS --- */
-.dashboard-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 30px; padding: 0 50px;
+.btn-panic { width: calc(100% - 80px); margin: 0 40px 15px 40px; padding: 10px; background: transparent; border: 2px solid var(--neon-red); color: var(--neon-red); font-weight: 800; cursor: pointer; font-family: 'Rajdhani'; transition: 0.3s; }
+.btn-panic:hover { background: var(--neon-red); color: white; box-shadow: 0 0 15px var(--neon-red); }
+
+/* DIALES (TAMAÑOS INTACTOS) Y BLOQUEO DE ARRASTRE FANTASMA */
+.motor-control-layout { display: flex; align-items: center; gap: 30px; margin-top: 10px; }
+.circular-dial-container { width: 250px; height: 250px; position: relative; display: flex; justify-content: center; align-items: center;}
+.dial-interactivo { width: 100%; height: 100%; border-radius: 50%; position: relative; overflow: hidden; cursor: grab; }
+
+.dial-interactivo img { -webkit-user-drag: none; user-select: none; pointer-events: none; }
+
+.dial-background-rotator {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    animation: rotateBg linear infinite; 
+    animation-duration: 0s; 
 }
-.glass-card {
-    background: var(--glass);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--glass-border);
-    padding: 40px; border-radius: 20px; position: relative;
-}
-.card-tag {
-    position: absolute; top: -10px; left: 20px; background: var(--neon-cyan);
-    color: black; font-size: 0.6rem; font-weight: 900; padding: 2px 10px; border-radius: 3px;
-}
-
-/* --- CONTROLS --- */
-.motor-unit { margin-bottom: 40px; }
-.motor-info { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; }
-.motor-info label { font-size: 0.8rem; color: #aaa; font-weight: bold; }
-.motor-info label small { display: block; color: #555; }
-.digital-readout { font-size: 3rem; font-weight: 900; color: white; }
-.digital-readout span { font-size: 1rem; color: var(--neon-cyan); margin-left: 10px; }
-
-.neo-control { display: flex; gap: 20px; align-items: center; }
-input[type=range] { flex-grow: 1; accent-color: var(--neon-cyan); height: 4px; cursor: pointer; }
-input[type=number] { 
-    background: transparent; border: 1px solid var(--glass-border); 
-    color: white; padding: 10px; width: 60px; text-align: center; font-weight: bold;
-}
-
-/* --- EMERGENCY --- */
-.emergency-zone { padding: 0 50px 20px 50px; }
-.btn-panic {
-    width: 100%; padding: 20px; background: transparent; 
-    border: 1px solid var(--neon-red); color: var(--neon-red);
-    font-weight: 900; letter-spacing: 2px; cursor: pointer; transition: 0.3s;
-}
-.btn-panic:hover { background: var(--neon-red); color: white; box-shadow: 0 0 30px var(--neon-red); }
-
-/* --- TEMP --- */
-.temp-readout { margin-top: 30px; text-align: center; }
-.temp-val { font-size: 4rem; font-weight: 900; color: #ff9d00; }
-.temp-status { color: var(--neon-green); font-size: 0.7rem; letter-spacing: 2px; }
-
-/* --- FOOTER (MODIFICADO: MÁS CLARO) --- */
-footer { 
-    padding: 40px 50px; 
-    opacity: 1; /* Eliminada la opacidad de 0.3 para que sea legible */
+@keyframes rotateBg {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
-.system-data { 
-    display: flex; 
-    gap: 30px; 
-    color: #e0e0e0; /* Color gris claro/blanco para visibilidad */
-    font-size: 0.75rem;
-    font-weight: 500;
-    letter-spacing: 1px;
+/* FILTRO MÁGICO: CONVIERTE EL RELOJ ARCOÍRIS EN AZUL CIAN FUTURISTA */
+.dial-background {
+    position: absolute; inset: 0; background-size: cover; background-position: center;
+    width: 100%; height: 100%; object-fit: cover;
+    filter: grayscale(100%) sepia(100%) hue-rotate(140deg) saturate(300%) brightness(1.2) drop-shadow(0 0 5px var(--neon-cyan));
+    animation: pulseAura 1.5s infinite ease-in-out; z-index: 1;
+}
+@keyframes pulseAura {
+    0%, 100% { filter: grayscale(100%) sepia(100%) hue-rotate(140deg) saturate(300%) brightness(1.2) drop-shadow(0 0 5px var(--neon-cyan)); }
+    50% { filter: grayscale(100%) sepia(100%) hue-rotate(140deg) saturate(300%) brightness(1.2) drop-shadow(0 0 15px var(--neon-cyan)); }
 }
 
-/* --- NUEVOS ESTILOS PARA LA CONSOLA DE MANDO --- */
-.master-console button {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    text-transform: uppercase;
-    border-radius: 8px !important;
+.dial-needle-container { 
+    position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; 
+    z-index: 2; transform-origin: center center; transition: transform 0.1s ease-out;
 }
 
-.master-console button:hover {
-    filter: brightness(1.2);
-    box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+.dial-needle-img {
+    height: 50%; width: auto; position: absolute; bottom: 50%; transform-origin: bottom center;
+    filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 5px var(--neon-cyan));
 }
 
-#pwrBtn.active {
-    box-shadow: 0 0 25px var(--neon-green);
-    border-color: white;
+.dial-center-overlay-data { 
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    z-index: 5; pointer-events: none; text-align: center; width: 100%;
 }
 
-#strBtn.active {
-    box-shadow: 0 0 25px var(--neon-cyan);
-    border-color: white;
+.rpm-number {
+    font-size: 2.5rem; font-weight: 700; color: #fff; line-height: 1;
+    text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 0 10px rgba(0,0,0,1);
+}
+.rpm-text { font-size: 0.8rem; color: var(--neon-cyan); font-weight: 700; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; }
+
+/* BLANQUEO DE TEXTOS */
+.title-white { color: #ffffff !important; font-weight: bold; font-size: 1.1rem; text-shadow: 0 0 5px rgba(255,255,255,0.5); }
+.title-white small { color: rgba(255,255,255,0.7) !important; font-size: 0.75rem; margin-left: 10px; }
+
+.label-white { color: #ffffff !important; text-shadow: 0 0 4px rgba(255,255,255,0.4); font-size: 0.7rem !important; }
+.text-white { color: #ffffff !important; text-shadow: 0 0 4px rgba(255,255,255,0.4); font-weight: 600; }
+
+/* COLORES Y SOMBRAS DEL PANEL DERECHO */
+.temp-val { font-size: 3rem; font-weight: 700; text-align: center; }
+.temp-val span { font-size: 0.9rem; margin-left: 5px; }
+
+#live-mvA { color: var(--axis-x-color); text-shadow: 0 0 15px rgba(255, 107, 0, 0.4); }
+#live-mvA span { color: var(--axis-x-color); text-shadow: none; }
+
+#live-mvB { color: var(--axis-y-color); text-shadow: 0 0 15px rgba(208, 112, 255, 0.4); }
+#live-mvB span { color: var(--axis-y-color); text-shadow: none; }
+
+/* CONFIGURACIÓN CASILLAS */
+.motor-settings-side { flex: 1; }
+.extra-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.control-group { display: flex; flex-direction: column; justify-content: flex-start; }
+
+.control-group label { 
+    font-size: 0.65rem; text-transform: uppercase; font-weight: bold;
+    min-height: 2.5em; display: flex; align-items: flex-end; padding-bottom: 5px; line-height: 1.1;
 }
 
-/* =========================================
-    📱 RESPONSIVE DESIGN & MOBILE ADAPTATION
-   ========================================= */
+input[type=number], select { background: rgba(0,0,0,0.4); border: none; border-bottom: 1px solid var(--neon-cyan); color: var(--neon-cyan); padding: 6px; font-family: 'Rajdhani'; outline: none; width: 100%; box-sizing: border-box; }
 
-@media (max-width: 960px) {
-    .dashboard-grid {
-        grid-template-columns: 1fr;
-        padding: 0 20px;
-    }
-    .glass-card { padding: 30px; }
-    header { padding: 20px; }
-    .emergency-zone { padding: 0 20px 20px 20px; }
-    footer { padding: 20px; }
-    .master-console { flex-wrap: wrap; }
-    .master-console button { min-width: 200px; }
-}
-
-@media (max-width: 600px) {
-    header {
-        flex-direction: column;
-        text-align: center;
-        gap: 15px;
-    }
-    .header-logo { height: 50px; }
-    .glass-card { padding: 20px; }
-    .master-console { flex-direction: column !important; gap: 10px !important; }
-    .master-console button { width: 100%; }
-    .motor-info { flex-direction: column; align-items: flex-start; gap: 5px; }
-    .digital-readout { font-size: 2.2rem; }
-    .neo-control { gap: 10px; }
-    .temp-val { font-size: 3rem; }
-    .system-data { flex-direction: column; gap: 10px; align-items: center; text-align: center; }
-}
+.hud-separator { border: 0; border-top: 1px dashed rgba(255,255,255,0.1); margin: 15px 0; }
+.footer-data { margin-top: 20px; display: flex; justify-content: space-between; font-size: 0.7rem; font-family: monospace; }
