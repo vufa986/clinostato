@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard WitMotion Pro - WTVB01-BT50</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="top-nav">
+        <div class="nav-tab active" onclick="switchTab('main', this)">📊 Principal</div>
+        <div class="nav-tab" onclick="switchTab('3d', this)">🧊 Vista 3D</div>
+        <div class="nav-tab" onclick="switchTab('chart', this)">📈 Ángulo (X,Y,Z)</div>
+        <div class="nav-tab" onclick="switchTab('chart2', this)">📉 Velocidad</div>
+        <div class="nav-tab" onclick="switchTab('config', this)">⚙️ Configuración</div>
+    </div>
+
+    <div class="device-header">
+        <div class="status-info">
+            <span id="deviceName">WTVB01-BT50 (Desconectado)</span>
+            <span id="logBadge" class="badge log-inactive">⏹️ Grabación en Pausa</span>
+        </div>
+        <div class="action-group">
+            <button id="btnToggleLog" class="btn-action log-toggle" disabled>🔴 Grabar</button>
+            <button id="btnExportar" class="btn-action export" disabled>📥 CSV (<span id="recordCount">0</span>)</button>
+            <button id="btnConectar" class="btn-action connect">Conectar</button>
+        </div>
+    </div>
+
+    <div class="content">
+    <div class="content">
+        <div id="tab-hud" class="tab-content" style="height: calc(100vh - 120px); padding:0;">
+            <iframe id="hudFrame" src="../index.html" style="width:100%; height:100%; border:none; display:block;"></iframe>
+        </div>
+    </div>
+    <div id="tab-main" class="tab-content active">
+            <div class="data-grid">
+                <div class="grid-item"><div class="val-group"><span class="val" id="ax">0.0</span><span class="unit">°</span></div><div class="label">Ángulo X</div></div>
+                <div class="grid-item"><div class="val-group"><span class="val" id="ay">0.0</span><span class="unit">°</span></div><div class="label">Ángulo Y</div></div>
+                <div class="grid-item"><div class="val-group"><span class="val" id="az">0.0</span><span class="unit">°</span></div><div class="label">Ángulo Z</div></div>
+                <div class="grid-item"><div class="val-group"><span class="val" id="temp">0.0</span><span class="unit">°C</span></div><div class="label">Temperatura</div></div>
+                
+                <div class="grid-item"><div class="val-group"><span class="val" id="vx">0</span><span class="unit">mm/s</span></div><div class="label">Velocidad X</div></div>
+                <div class="grid-item"><div class="val-group"><span class="val" id="vy">0</span><span class="unit">mm/s</span></div><div class="label">Velocidad Y</div></div>
+                <div class="grid-item"><div class="val-group"><span class="val" id="vz">0</span><span class="unit">mm/s</span></div><div class="label">Velocidad Z</div></div>
+                <div class="grid-item"><div class="val-group"><span class="val" id="vTotal">0</span><span class="unit">mm/s</span></div><div class="label">Vel RMS Total</div></div>
+
+                <div class="grid-item"><div class="val-group"><span class="val" id="dx">0</span><span class="unit">um</span></div><div class="label">Desplazamiento X</div></div>
+                <div class="grid-item"><div class="val-group"><span class="val" id="dy">0</span><span class="unit">um</span></div><div class="label">Desplazamiento Y</div></div>
+                <div class="grid-item"><div class="val-group"><span class="val" id="dz">0</span><span class="unit">um</span></div><div class="label">Desplazamiento Z</div></div>
+                <div class="grid-item"><div class="val-group"><span class="val" id="dTotal">0</span><span class="unit">um</span></div><div class="label">Despl. Total</div></div>
+
+                <div class="grid-item"><div class="val-group"><span class="val" id="fx">0</span><span class="unit">Hz</span></div><div class="label">Frecuencia X</div></div>
+                <div class="grid-item"><div class="val-group"><span class="val" id="fy">0</span><span class="unit">Hz</span></div><div class="label">Frecuencia Y</div></div>
+                <div class="grid-item"><div class="val-group"><span class="val" id="fz">0</span><span class="unit">Hz</span></div><div class="label">Frecuencia Z</div></div>
+                <div class="grid-item"><div class="val-group"><span class="val" id="batteryVal">100</span><span class="unit">%</span></div><div class="label">Batería Interna</div></div>
+            </div>
+
+            <div class="dashboard-widgets">
+                <div class="widget-card oscilloscope-card">
+                    <div class="widget-header">
+                        <span>⚡ Osciloscopio de Vibración (Forma de Onda en vivo)</span>
+                        <span class="status-dot live"></span>
+                    </div>
+                    <div class="canvas-wrapper">
+                        <canvas id="oscilloscopeCanvas"></canvas>
+                    </div>
+                </div>
+                <div class="widget-card summary-card">
+                    <div class="widget-header">
+                        <span>📊 Tendencia RMS Combinada</span>
+                    </div>
+                    <div class="canvas-wrapper">
+                        <canvas id="summaryChartCanvas"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-3d" class="tab-content">
+            <div class="view-3d-wrapper">
+                <div class="camera-controls">
+                    <span class="cam-hint">🖱️ Clic + Arrastrar: Orbitar | Rueda: Zoom</span>
+                    <button id="btnResetCam" class="btn-cmd cam-reset">Restablecer Vista</button>
+                </div>
+
+                <div class="scene-container" id="sceneContainer">
+                    <div class="ground-plane">
+                        <div class="grid-ring"></div>
+                        <span class="compass-lbl n">Y+</span>
+                        <span class="compass-lbl s">Y-</span>
+                        <span class="compass-lbl e">X+</span>
+                        <span class="compass-lbl w">X-</span>
+                    </div>
+
+                    <div class="sensor-module" id="sensorCube">
+                        <div class="face face--top">
+                            <div class="chip-brand">WitMotion Pro</div>
+                            <div class="chip-model">WTVB01-BT50</div>
+                            <div class="axis-indicator">
+                                <span class="arr-y">▲ Y</span>
+                                <span class="arr-x">X ►</span>
+                            </div>
+                            <div class="led-indicator"></div>
+                        </div>
+                        <div class="face face--bottom"></div>
+                        <div class="face face--front"><span class="port">BLE 5.0</span></div>
+                        <div class="face face--back"></div>
+                        <div class="face face--right"><span class="axis-z">Z+</span></div>
+                        <div class="face face--left"></div>
+                    </div>
+                </div>
+
+                <div class="attitude-panels">
+                    <div class="att-card">
+                        <span class="att-label">Pitch (Inclinación X)</span>
+                        <span class="att-val pitch-color" id="lblPitch">0.0°</span>
+                    </div>
+                    <div class="att-card">
+                        <span class="att-label">Roll (Alabeo Y)</span>
+                        <span class="att-val roll-color" id="lblRoll">0.0°</span>
+                    </div>
+                    <div class="att-card">
+                        <span class="att-label">Yaw (Azimut Z)</span>
+                        <span class="att-val yaw-color" id="lblYaw">0.0°</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="tab-chart" class="tab-content">
+            <div class="chart-tab-container">
+                <div class="chart-header-panel">
+                    <div class="chart-title">
+                        <h3>📈 Historial de Inclinación (Ángulos X, Y, Z)</h3>
+                        <p>Monitoreo continuo de estabilidad espacial y derivas angulares.</p>
+                    </div>
+                    <div class="chart-legend-custom">
+                        <span class="legend-item"><span class="dot x"></span>Pitch (X): <b id="chkValX">0.0°</b></span>
+                        <span class="legend-item"><span class="dot y"></span>Roll (Y): <b id="chkValY">0.0°</b></span>
+                        <span class="legend-item"><span class="dot z"></span>Yaw (Z): <b id="chkValZ">0.0°</b></span>
+                    </div>
+                </div>
+                <div class="kpi-row">
+                    <div class="kpi-card"><span>Pico Máximo X</span><h4 id="peakAx">0.0°</h4></div>
+                    <div class="kpi-card"><span>Pico Máximo Y</span><h4 id="peakAy">0.0°</h4></div>
+                    <div class="kpi-card"><span>Pico Máximo Z</span><h4 id="peakAz">0.0°</h4></div>
+                </div>
+                <div class="chart-container expanded"><canvas id="angleChart"></canvas></div>
+            </div>
+        </div>
+
+        <div id="tab-chart2" class="tab-content">
+            <div class="chart-tab-container">
+                <div class="chart-header-panel">
+                    <div class="chart-title">
+                        <h3>📉 Severidad de Vibración (Velocidad)</h3>
+                        <p>Evaluación de salud de maquinaria basada en el estándar internacional ISO 10816.</p>
+                    </div>
+                    <div class="chart-legend-custom">
+                        <span class="legend-item"><span class="dot x"></span>Vel X: <b id="chkVx">0 mm/s</b></span>
+                        <span class="legend-item"><span class="dot y"></span>Vel Y: <b id="chkVy">0 mm/s</b></span>
+                        <span class="legend-item"><span class="dot z"></span>Vel Z: <b id="chkVz">0 mm/s</b></span>
+                    </div>
+                </div>
+                <div class="kpi-row">
+                    <div class="kpi-card"><span>Pico Máximo Vibración</span><h4 id="peakVel">0 mm/s</h4></div>
+                    <div class="kpi-card"><span>Estado Normativo ISO</span><h4 id="isoStatus" class="status-good">🟢 Óptimo</h4></div>
+                    <div class="kpi-card"><span>Umbral de Alerta Estándar</span><h4 class="static-limit">4.5 mm/s</h4></div>
+                </div>
+                <div class="chart-container expanded"><canvas id="velChart"></canvas></div>
+            </div>
+        </div>
+        
+        <div id="tab-config" class="tab-content">
+            <div class="config-panel">
+                <h3>Calibración y Control de Actitud</h3>
+                <p class="config-desc">Envía comandos nativos de protocolo WitMotion por BLE para ajustar los registros internos del hardware.</p>
+                
+                <div class="command-grid">
+                    <div class="command-card">
+                        <h4>Calibrar Inclinación (Zero Bias)</h4>
+                        <p>Establece la orientación actual como el plano horizontal de referencia cero.</p>
+                        <button id="btnCalibrateAngle" class="btn-cmd">Calibrar Ejes XY</button>
+                    </div>
+                    <div class="command-card">
+                        <h4>Puesta a Cero Ángulo Z</h4>
+                        <p>Reinicia el marco referencial relativo del eje de deriva espacial Z.</p>
+                        <button id="btnResetZ" class="btn-cmd">Resetear Eje Z</button>
+                    </div>
+                    <div class="command-card">
+                        <h4>Desbloquear Registros</h4>
+                        <p>Envía la clave de acceso para permitir escribir en la EEPROM interna.</p>
+                        <button id="btnUnlock" class="btn-cmd">Enviar Desbloqueo</button>
+                    </div>
+                    <div class="command-card">
+                        <h4>Guardar Configuración</h4>
+                        <p>Consolida de forma persistente los cambios en la memoria del sensor.</p>
+                        <button id="btnSaveConfig" class="btn-cmd">Guardar (Save)</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>

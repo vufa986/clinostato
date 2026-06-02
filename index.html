@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusTech Clinostato - HUD Control 2.0</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+</head>
+<body>
+
+<div class="scanlines"></div>
+<video class="wallpaper-tunnnel" autoplay loop muted playsinline><source src="img/fondo-god.mp4" type="video/mp4"></video>
+
+<div id="loader">
+    <img src="img/logo_nexus.png" alt="Nexus Logo" class="loader-logo" draggable="false">
+    <div class="loading-container"><div class="progress-bar"></div></div>
+    <div class="loader-text">INICIANDO SISTEMAS BIOMÉTRICOS...</div>
+</div>
+
+<div id="main-content" style="display:none;">
+    <header class="top-header">
+        <div class="brand">
+            <img src="img/logo_nexus.png" alt="Nexus" class="header-logo" draggable="false">
+            <p>Advanced Biometric Research System</p>
+        </div>
+        <div id="live-telemetry" class="live-indicator status-off"><span class="pulse-dot"></span> LIVE TELEMETRY</div>
+    </header>
+
+    <button class="btn-panic" id="panicButton">⚠ SYSTEM EMERGENCY RESET: CLEAR ALL PARAMETERS ⚠</button>
+
+    <div class="dashboard-grid">
+        <section class="hud-panel">
+            <div class="panel-corners"></div>
+            <div class="card-tag">ENGINE CONTROL</div>
+            
+            <div class="master-console">
+                <button id="pwrBtn" onclick="togglePower()">SYSTEM POWER: OFF</button>
+                <button id="strBtn" onclick="toggleStart()">START ENGINE</button>
+            </div>
+
+            <div class="motor-unit">
+                <div class="motor-info"><label class="title-white">AXIS X <small>Primary Rotation</small></label></div>
+                <div class="motor-control-layout">
+                    <div class="circular-dial-container" id="dialXContainer">
+                        <div class="dial-interactivo" id="dialA">
+                            <div class="dial-background-rotator" id="bgRotatorA"><img src="img/dial_fondo.png" class="dial-background"></div>
+                            <div class="dial-needle-container"><img src="img/puntero_aguja.png" class="dial-needle-img"></div>
+                            <div class="dial-center-overlay-data">
+                                <div class="rpm-number" id="valA-center">0.0</div>
+                                <div class="rpm-text">RPM</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="motor-settings-side">
+                        <div class="extra-controls">
+                            <div class="control-group">
+                                <label class="label-white">SENTIDO</label>
+                                <select id="dirA" onchange="updateExtras('A')"><option value="1">Horario (1)</option><option value="2">Antihorario (2)</option></select>
+                            </div>
+                            <div class="control-group">
+                                <label class="label-white">RANGO ALEATORIO</label>
+                                <input type="number" id="mvA" value="0.0" step="0.1" onchange="updateExtras('A')">
+                            </div>
+                            <div class="control-group">
+                                <label class="label-white">AUTO DIR (SEG)</label>
+                                <input type="number" id="autoDirA" value="0" min="0" step="1" onchange="updateAutoDir('A')">
+                            </div>
+                            <div class="control-group">
+                                <label class="label-white">LÍMITE DE TORQUE</label>
+                                <input type="number" id="torqueA" value="0.0" step="0.1" onchange="updateExtras('A')">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="hud-separator">
+
+            <div class="motor-unit">
+                <div class="motor-info"><label class="title-white">AXIS Y <small>Secondary Rotation</small></label></div>
+                <div class="motor-control-layout">
+                    <div class="circular-dial-container" id="dialYContainer">
+                        <div class="dial-interactivo" id="dialB">
+                            <div class="dial-background-rotator" id="bgRotatorB"><img src="img/dial_fondo.png" class="dial-background"></div>
+                            <div class="dial-needle-container"><img src="img/puntero_aguja.png" class="dial-needle-img"></div>
+                            <div class="dial-center-overlay-data">
+                                <div class="rpm-number" id="valB-center">0.0</div>
+                                <div class="rpm-text">RPM</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="motor-settings-side">
+                        <div class="extra-controls">
+                            <div class="control-group">
+                                <label class="label-white">SENTIDO</label>
+                                <select id="dirB" onchange="updateExtras('B')"><option value="1">Horario (1)</option><option value="2">Antihorario (2)</option></select>
+                            </div>
+                            <div class="control-group">
+                                <label class="label-white">RANGO ALEATORIO</label>
+                                <input type="number" id="mvB" value="0.0" step="0.1" onchange="updateExtras('B')">
+                            </div>
+                            <div class="control-group">
+                                <label class="label-white">AUTO DIR (SEG)</label>
+                                <input type="number" id="autoDirB" value="0" min="0" step="1" onchange="updateAutoDir('B')">
+                            </div>
+                            <div class="control-group">
+                                <label class="label-white">LÍMITE DE TORQUE</label>
+                                <input type="number" id="torqueB" value="0.0" step="0.1" onchange="updateExtras('B')">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="hud-panel monitor-panel">
+            <div class="panel-corners"></div>
+            <div class="card-tag">SYSTEM MONITOR</div>
+            
+            <div class="chart-area"><canvas id="telemetryChart"></canvas></div>
+            <div id="dashboard-table" class="dashboard-table-container"></div>
+            
+            <div class="telemetry-readouts" style="display: flex; justify-content: space-around; margin-top: 20px;">
+                <div class="temp-readout" style="text-align: center;">
+                    <label class="label-white">AXIS X (V90) FINAL MV</label>
+                    <div class="temp-val" id="live-mvA">0.00<span>RPM</span></div>
+                </div>
+                <div class="temp-readout" style="text-align: center;">
+                    <label class="label-white">AXIS Y (S210) FINAL MV</label>
+                    <div class="temp-val" id="live-mvB">0.00<span>RPM</span></div>
+                </div>
+            </div>
+
+            <div class="system-console">
+                <div class="console-header">C:\NEXUS_TECH\SYS_LOG.exe</div>
+                <div id="console-output" class="console-body">
+                    <div style="color: var(--neon-cyan)">[SYSTEM] Direct Control Ready. Waiting for Power On...</div>
+                </div>
+            </div>
+
+            <div class="footer-data">
+                <span class="text-white">NODE_ID: 1361886</span>
+                <button class="btn-sensor-link" onclick="window.open('WTVB01-BT50 - dashboard/WTVB01.html', '_blank')">📡 SENSOR WITMOTION</button>
+                <span class="text-white">PLC_IP: 192.168.0.1</span>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
