@@ -51,7 +51,7 @@ echo.
 
 :: 6. Abre Chrome automaticamente en la interfaz del Clinostato
 echo [SISTEMA] Abriendo Panel de Control Maestro (Clinostato)...
-start http://127.0.0.1:8000/
+start https://wick-tummy-wrecking.ngrok-free.dev/
 
 :: 7. Ejecuta el backend principal
 python main.py

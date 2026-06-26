@@ -11,7 +11,7 @@ export class ChartManager {
             return gradient;
         };
 
-        this.chart = new Chart(this.ctx, {
+        this.chart = new Chart(this.ctx, { 
             type: 'line',
             data: {
                 labels: Array(this.maxPoints).fill(''),
