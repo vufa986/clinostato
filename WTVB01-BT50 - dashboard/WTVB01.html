@@ -6,6 +6,7 @@
     <title>Dashboard WitMotion Pro - WTVB01-BT50</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 </head>
 <body>
     <div class="top-nav">
@@ -13,6 +14,7 @@
         <div class="nav-tab" onclick="switchTab('3d', this)">🧊 Vista 3D</div>
         <div class="nav-tab" onclick="switchTab('chart', this)">📈 Ángulo (X,Y,Z)</div>
         <div class="nav-tab" onclick="switchTab('chart2', this)">📉 Velocidad</div>
+        <div class="nav-tab" onclick="switchTab('tasmg', this)">🪐 taSMG 3D</div>
         <div class="nav-tab" onclick="switchTab('config', this)">⚙️ Configuración</div>
     </div>
 
@@ -24,17 +26,17 @@
         <div class="action-group">
             <button id="btnToggleLog" class="btn-action log-toggle" disabled>🔴 Grabar</button>
             <button id="btnExportar" class="btn-action export" disabled>📥 CSV (<span id="recordCount">0</span>)</button>
-            <button id="btnConectar" class="btn-action connect">Conectar</button>
+            <button id="btnConectar" class="btn-action connect" disabled style="background: #166534; cursor: default;">Gestionado por PC</button>
         </div>
     </div>
 
     <div class="content">
-    <div class="content">
+        
         <div id="tab-hud" class="tab-content" style="height: calc(100vh - 120px); padding:0;">
             <iframe id="hudFrame" src="../index.html" style="width:100%; height:100%; border:none; display:block;"></iframe>
         </div>
-    </div>
-    <div id="tab-main" class="tab-content active">
+
+        <div id="tab-main" class="tab-content active">
             <div class="data-grid">
                 <div class="grid-item"><div class="val-group"><span class="val" id="ax">0.0</span><span class="unit">°</span></div><div class="label">Ángulo X</div></div>
                 <div class="grid-item"><div class="val-group"><span class="val" id="ay">0.0</span><span class="unit">°</span></div><div class="label">Ángulo Y</div></div>
@@ -78,57 +80,27 @@
             </div>
         </div>
 
+        <!-- NUEVA VISTA 3D CIENTÍFICA DEL SENSOR -->
         <div id="tab-3d" class="tab-content">
-            <div class="view-3d-wrapper">
-                <div class="camera-controls">
-                    <span class="cam-hint">🖱️ Clic + Arrastrar: Orbitar | Rueda: Zoom</span>
-                    <button id="btnResetCam" class="btn-cmd cam-reset">Restablecer Vista</button>
-                </div>
-
-                <div class="scene-container" id="sceneContainer">
-                    <div class="ground-plane">
-                        <div class="grid-ring"></div>
-                        <span class="compass-lbl n">Y+</span>
-                        <span class="compass-lbl s">Y-</span>
-                        <span class="compass-lbl e">X+</span>
-                        <span class="compass-lbl w">X-</span>
+            <div class="chart-tab-container">
+                <div class="chart-header-panel">
+                    <div class="chart-title">
+                        <h3>🧊 Orientación Espacial del Sensor (Cinemática Directa)</h3>
+                        <p>Representación geométrica en tiempo real mediante matrices de rotación.</p>
                     </div>
-
-                    <div class="sensor-module" id="sensorCube">
-                        <div class="face face--top">
-                            <div class="chip-brand">WitMotion Pro</div>
-                            <div class="chip-model">WTVB01-BT50</div>
-                            <div class="axis-indicator">
-                                <span class="arr-y">▲ Y</span>
-                                <span class="arr-x">X ►</span>
-                            </div>
-                            <div class="led-indicator"></div>
-                        </div>
-                        <div class="face face--bottom"></div>
-                        <div class="face face--front"><span class="port">BLE 5.0</span></div>
-                        <div class="face face--back"></div>
-                        <div class="face face--right"><span class="axis-z">Z+</span></div>
-                        <div class="face face--left"></div>
+                    <div class="chart-legend-custom">
+                        <span class="legend-item"><span class="dot x"></span>Pitch: <b id="lblPitch">0.0°</b></span>
+                        <span class="legend-item"><span class="dot y"></span>Roll: <b id="lblRoll">0.0°</b></span>
+                        <span class="legend-item"><span class="dot z"></span>Yaw: <b id="lblYaw">0.0°</b></span>
                     </div>
                 </div>
-
-                <div class="attitude-panels">
-                    <div class="att-card">
-                        <span class="att-label">Pitch (Inclinación X)</span>
-                        <span class="att-val pitch-color" id="lblPitch">0.0°</span>
-                    </div>
-                    <div class="att-card">
-                        <span class="att-label">Roll (Alabeo Y)</span>
-                        <span class="att-val roll-color" id="lblRoll">0.0°</span>
-                    </div>
-                    <div class="att-card">
-                        <span class="att-label">Yaw (Azimut Z)</span>
-                        <span class="att-val yaw-color" id="lblYaw">0.0°</span>
-                    </div>
+                <div class="chart-container expanded" style="height: 500px; background: transparent;">
+                    <div id="plotlySensor" style="width: 100%; height: 100%;"></div>
                 </div>
             </div>
         </div>
         
+        <!-- PESTAÑA DE HISTORIAL CORREGIDA (Con sus KPIs de vuelta) -->
         <div id="tab-chart" class="tab-content">
             <div class="chart-tab-container">
                 <div class="chart-header-panel">
@@ -143,9 +115,9 @@
                     </div>
                 </div>
                 <div class="kpi-row">
-                    <div class="kpi-card"><span>Pico Máximo X</span><h4 id="peakAx">0.0°</h4></div>
-                    <div class="kpi-card"><span>Pico Máximo Y</span><h4 id="peakAy">0.0°</h4></div>
-                    <div class="kpi-card"><span>Pico Máximo Z</span><h4 id="peakAz">0.0°</h4></div>
+                    <div class="kpi-card"><span>Pico Máximo X</span><h4 id="peakAx" style="color: #3282f6;">0.0°</h4></div>
+                    <div class="kpi-card"><span>Pico Máximo Y</span><h4 id="peakAy" style="color: #eab308;">0.0°</h4></div>
+                    <div class="kpi-card"><span>Pico Máximo Z</span><h4 id="peakAz" style="color: #10b981;">0.0°</h4></div>
                 </div>
                 <div class="chart-container expanded"><canvas id="angleChart"></canvas></div>
             </div>
@@ -202,8 +174,95 @@
                 </div>
             </div>
         </div>
-    </div>
 
-    <script type="module" src="js/app.js"></script>
+        <div id="tab-tasmg" class="tab-content">
+            <div class="chart-header-panel">
+                <div class="chart-title">
+                    <h3>🪐 Trayectoria Espacial de Gravedad (taSMG)</h3>
+                    <p>Mapeo del vector sobre la esfera unitaria y proyección 2D para validación de homogeneización.</p>
+                </div>
+                <div class="kpi-row" style="width: auto;">
+                    <div class="kpi-card" style="border-color: #3282f6; box-shadow: 0 0 15px rgba(50,130,246,0.1);">
+                        <span>Convergencia taSMG Actual</span>
+                        <h4 id="lbl-tasmg" style="color:#00ff95; text-shadow: 0 0 8px rgba(0,255,149,0.4);">1.00000 G</h4>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tasmg-grid">
+                
+                <div class="tasmg-col">
+                    <div class="tasmg-chart-wrapper" style="padding: 0; overflow: hidden;">
+                        <div id="plotlySphere" class="plotly-container"></div>
+                    </div>
+                    
+                    <div class="math-panel" style="margin-top: 0; flex: 1; justify-content: center;">
+                        <div class="math-header">Vector de Gravedad Instantáneo (g<sub>inst</sub>)</div>
+                        <div class="math-live-vars" style="margin-bottom: 10px;">
+                            <span>Ángulo Pitch (θx) = <b id="math-pitch" class="val-x">0.00°</b></span> | 
+                            <span>Ángulo Roll (θy) = <b id="math-roll" class="val-y">0.00°</b></span>
+                        </div>
+                        <div class="math-matrix-container">
+                            <div class="math-term">g<sub>inst</sub> = </div>
+                            <div class="matrix-bracket">[</div>
+                            <div class="matrix-col formula-col">
+                                <span>cos(θy) · sin(θx)</span>
+                                <span>-sin(θy)</span>
+                                <span>-cos(θy) · cos(θx)</span> 
+                            </div>
+                            <div class="matrix-bracket">]</div>
+                            <div class="math-term"> = </div>
+                            <div class="matrix-bracket">[</div>
+                            <div class="matrix-col result-col">
+                                <span id="math-gx">0.0000</span>
+                                <span id="math-gy">0.0000</span>
+                                <span id="math-gz">-1.0000</span>
+                            </div>
+                            <div class="matrix-bracket">]</div>
+                            <div class="math-term"> G </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tasmg-col">
+                    <div class="tasmg-chart-wrapper">
+                        <div class="widget-header" style="margin-bottom: 10px;">
+                            <span>📍 Proyección Vectorial XY (Huella de Gravedad)</span>
+                            <span class="status-dot live"></span>
+                        </div>
+                        <div id="plotly2D" class="plotly-container"></div>
+                    </div>
+
+                    <div class="math-panel" style="margin-top: 0; flex: 1; justify-content: center;">
+                        <div class="math-header">Análisis Vectorial 2D (Proyección XY)</div>
+                        <div class="math-live-vars" style="font-size: 14px; margin-bottom: 5px;">
+                            <span>Eje X (g<sub>x</sub>) = <b id="math-2d-x" class="val-x">0.0000</b></span> | 
+                            <span>Eje Y (g<sub>y</sub>) = <b id="math-2d-y" class="val-y">0.0000</b></span>
+                        </div>
+                        
+                        <div style="display: flex; gap: 20px; width: 100%; justify-content: center; flex-wrap: wrap;">
+                            <div class="math-matrix-container" style="flex-direction: column; gap: 6px; padding: 12px 20px;">
+                                <div style="font-size: 10px; color: var(--gray); text-transform: uppercase; letter-spacing: 1px;">Magnitud |g<sub>xy</sub>|</div>
+                                <div style="display: flex; align-items: baseline; gap: 10px;">
+                                    <span style="font-family: monospace; color: #71717a; font-size: 13px;">√(x²+y²) =</span>
+                                    <span class="math-term" style="color: #00ff95; font-size: 18px;" id="math-2d-mag">0.0000 G</span>
+                                </div>
+                            </div>
+                            
+                            <div class="math-matrix-container" style="flex-direction: column; gap: 6px; padding: 12px 20px;">
+                                <div style="font-size: 10px; color: var(--gray); text-transform: uppercase; letter-spacing: 1px;">Fase Polar (α)</div>
+                                <div style="display: flex; align-items: baseline; gap: 10px;">
+                                    <span style="font-family: monospace; color: #71717a; font-size: 13px;">atan2(y,x) =</span>
+                                    <span class="math-term" style="color: #eab308; font-size: 18px;" id="math-2d-ang">0.00°</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        
+    </div> <script type="module" src="js/app_scada.js"></script>
 </body>
 </html>

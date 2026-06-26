@@ -7,25 +7,20 @@
     --text: #e0e0e0;
     
     /* COLORES PARA TELEMETRÍA (FUTURISTAS) */
-    --axis-x-color: #ff6b00; /* Naranja Cyberpunk */
-    --axis-y-color: #d070ff; /* Morado Claro Neón */
+    --axis-x-color: #ff6b00; 
+    --axis-y-color: #d070ff; 
 }
 
 body { 
     background: var(--bg); color: var(--text); font-family: 'Rajdhani', sans-serif; 
-    margin: 0; overflow-x: hidden; overflow-y: hidden; /* Evita scroll vertical indeseado */
+    margin: 0; overflow-x: hidden; overflow-y: hidden; 
     background-image: linear-gradient(rgba(0, 242, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 242, 255, 0.03) 1px, transparent 1px);
     background-size: 30px 30px;
     user-select: none; 
 }
 
-/* OPACIDAD AL 0.6 DEL VIDEO */
 .wallpaper-tunnnel {
-    position: fixed; inset: 0; 
-    width: 100vw; height: 100vh; 
-    object-fit: cover; z-index: -1; 
-    opacity: 0.8; 
-    pointer-events: none;
+    position: fixed; inset: 0; width: 100vw; height: 100vh; object-fit: cover; z-index: -1; opacity: 0.8; pointer-events: none;
 }
 
 .scanlines {
@@ -34,47 +29,61 @@ body {
 }
 
 #loader { 
-    position: fixed; inset: 0; background: var(--bg); z-index: 10000; 
-    display: flex; flex-direction: column; justify-content: center; align-items: center; 
+    position: fixed; inset: 0; background: var(--bg); z-index: 10000; display: flex; flex-direction: column; justify-content: center; align-items: center; 
 }
 
+/* BORDE BLANCO ULTRAFINO (0.2px) EN EL LOGO DE CARGA + LUZ NEON */
 .loader-logo { 
     width: 200px; 
     animation: logoGrow 3s ease-in-out forwards, pulseGlow 2s infinite alternate; 
 }
+@keyframes pulseGlow { 
+    from { filter: drop-shadow(0.2px 0.2px 0px #ffffff) drop-shadow(-0.2px -0.2px 0px #ffffff) drop-shadow(0.2px -0.2px 0px #ffffff) drop-shadow(-0.2px 0.2px 0px #ffffff) drop-shadow(0 0 5px var(--neon-cyan)); } 
+    to { filter: drop-shadow(0.2px 0.2px 0px #ffffff) drop-shadow(-0.2px -0.2px 0px #ffffff) drop-shadow(0.2px -0.2px 0px #ffffff) drop-shadow(-0.2px 0.2px 0px #ffffff) drop-shadow(0 0 20px var(--neon-magenta)); } 
+}
+@keyframes logoGrow { from { transform: scale(1.3); } to { transform: scale(1.7); } }
+
 .loading-container { width: 300px; height: 4px; background: rgba(0, 242, 255, 0.1); margin-top: 40px; overflow: hidden; }
 .progress-bar { width: 0%; height: 100%; background: var(--neon-cyan); animation: loadingProgress 3s forwards; box-shadow: 0 0 15px var(--neon-cyan); }
-
-.loader-text {
-    font-size: 1rem; font-weight: 700; letter-spacing: 4px; 
-    margin-top: 15px; color: var(--neon-cyan); text-shadow: 0 0 10px var(--neon-cyan);
-}
-
-@keyframes logoGrow { from { transform: scale(1.3); } to { transform: scale(1.7); } }
-@keyframes pulseGlow { from { filter: drop-shadow(0 0 5px var(--neon-cyan)); } to { filter: drop-shadow(0 0 20px var(--neon-magenta)); } }
 @keyframes loadingProgress { to { width: 100%; } }
 
-/* AJUSTES DE ESPACIOS PARA QUE ENCAJE AL 100% DE ZOOM */
-header { display: flex; justify-content: space-between; padding: 15px 50px; align-items: center; }
-.header-logo { height: 50px; }
+.loader-text {
+    font-size: 1rem; font-weight: 700; letter-spacing: 4px; margin-top: 15px; color: var(--neon-cyan); text-shadow: 0 0 10px var(--neon-cyan);
+}
+
+.top-header { display: flex; justify-content: space-between; padding: 15px 50px; align-items: center; }
+
+/* BORDE BLANCO ULTRAFINO (0.2px) EN EL LOGO PEQUEÑO DE LA ESQUINA */
+.header-logo { 
+    height: 50px; 
+    filter: drop-shadow(0.2px 0.2px 0px #ffffff) drop-shadow(-0.2px -0.2px 0px #ffffff) drop-shadow(0.2px -0.2px 0px #ffffff) drop-shadow(-0.2px 0.2px 0px #ffffff);
+}
+
 .brand p { font-size: 0.8rem; color: var(--neon-cyan); letter-spacing: 2px; font-weight: bold; margin: 0; }
 
-/* TELEMETRÍA DINÁMICA (Verde cuando está ON, Rojo en OFF) */
 .live-indicator { font-weight: bold; display: flex; align-items: center; gap: 10px; transition: color 0.3s ease, text-shadow 0.3s ease; }
 .status-off { color: var(--neon-red) !important; text-shadow: 0 0 8px rgba(255, 16, 48, 0.6); }
 .status-off .pulse-dot { background: var(--neon-red); }
 .status-on { color: #00ff95 !important; text-shadow: 0 0 8px rgba(0, 255, 149, 0.6); }
 .status-on .pulse-dot { background: #00ff95; }
-
 .pulse-dot { width: 8px; height: 8px; border-radius: 50%; animation: blink 1s infinite; box-shadow: 0 0 6px currentColor; }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
-.dashboard-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px; padding: 0 40px; }
+.dashboard-grid { 
+    display: grid; 
+    grid-template-columns: 1.2fr 0.8fr; 
+    gap: 20px; 
+    padding: 0 40px; 
+    box-sizing: border-box; 
+    max-width: 100vw;
+}
+
 .hud-panel { 
     background: var(--hud-bg); border: 1px solid rgba(0, 242, 255, 0.2); 
     padding: 20px; position: relative; 
     clip-path: polygon(0 15px, 15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%);
     backdrop-filter: blur(5px);
+    box-sizing: border-box;
 }
 .panel-corners::before, .panel-corners::after { content: ''; position: absolute; width: 20px; height: 20px; border: 2px solid var(--neon-cyan); pointer-events: none; }
 .panel-corners::before { top: 0; left: 0; border-right: none; border-bottom: none; }
@@ -86,30 +95,19 @@ header { display: flex; justify-content: space-between; padding: 15px 50px; alig
 .pwr-on { background: var(--neon-magenta) !important; color: white !important; box-shadow: 0 0 15px var(--neon-magenta); border-color: var(--neon-magenta) !important; }
 .str-on { background: var(--neon-cyan) !important; color: #000 !important; box-shadow: 0 0 15px var(--neon-cyan); }
 
-.btn-panic { width: calc(100% - 80px); margin: 0 40px 15px 40px; padding: 10px; background: transparent; border: 2px solid var(--neon-red); color: var(--neon-red); font-weight: 800; cursor: pointer; font-family: 'Rajdhani'; transition: 0.3s; }
+.btn-panic { width: calc(100% - 80px); margin: 0 40px 15px 40px; padding: 10px; background: transparent; border: 2px solid var(--neon-red); color: var(--neon-red); font-weight: 800; cursor: pointer; font-family: 'Rajdhani'; transition: 0.3s; box-sizing: border-box; }
 .btn-panic:hover { background: var(--neon-red); color: white; box-shadow: 0 0 15px var(--neon-red); }
 
-/* DIALES (TAMAÑOS INTACTOS) Y BLOQUEO DE ARRASTRE FANTASMA */
-.motor-control-layout { display: flex; align-items: center; gap: 30px; margin-top: 10px; }
-.circular-dial-container { width: 250px; height: 250px; position: relative; display: flex; justify-content: center; align-items: center;}
+.motor-control-layout { display: flex; align-items: center; gap: 30px; margin-top: 10px; width: 100%; box-sizing: border-box;}
+.circular-dial-container { width: 250px; height: 250px; position: relative; display: flex; justify-content: center; align-items: center; flex-shrink: 0;}
 .dial-interactivo { width: 100%; height: 100%; border-radius: 50%; position: relative; overflow: hidden; cursor: grab; }
-
 .dial-interactivo img { -webkit-user-drag: none; user-select: none; pointer-events: none; }
 
-.dial-background-rotator {
-    position: absolute; inset: 0; width: 100%; height: 100%;
-    animation: rotateBg linear infinite; 
-    animation-duration: 0s; 
-}
-@keyframes rotateBg {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
+.dial-background-rotator { position: absolute; inset: 0; width: 100%; height: 100%; animation: rotateBg linear infinite; animation-duration: 0s; }
+@keyframes rotateBg { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-/* FILTRO MÁGICO: CONVIERTE EL RELOJ ARCOÍRIS EN AZUL CIAN FUTURISTA */
 .dial-background {
-    position: absolute; inset: 0; background-size: cover; background-position: center;
-    width: 100%; height: 100%; object-fit: cover;
+    position: absolute; inset: 0; background-size: cover; background-position: center; width: 100%; height: 100%; object-fit: cover;
     filter: grayscale(100%) sepia(100%) hue-rotate(140deg) saturate(300%) brightness(1.2) drop-shadow(0 0 5px var(--neon-cyan));
     animation: pulseAura 1.5s infinite ease-in-out; z-index: 1;
 }
@@ -118,79 +116,199 @@ header { display: flex; justify-content: space-between; padding: 15px 50px; alig
     50% { filter: grayscale(100%) sepia(100%) hue-rotate(140deg) saturate(300%) brightness(1.2) drop-shadow(0 0 15px var(--neon-cyan)); }
 }
 
-.dial-needle-container { 
-    position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; 
-    z-index: 2; transform-origin: center center; transition: transform 0.1s ease-out;
-}
+.dial-needle-container { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; z-index: 2; transform-origin: center center; transition: transform 0.1s ease-out; }
+.dial-needle-img { height: 50%; width: auto; position: absolute; bottom: 50%; transform-origin: bottom center; filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 5px var(--neon-cyan)); }
+.dial-center-overlay-data { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 5; pointer-events: none; text-align: center; width: 100%; }
 
-.dial-needle-img {
-    height: 50%; width: auto; position: absolute; bottom: 50%; transform-origin: bottom center;
-    filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 5px var(--neon-cyan));
-}
-
-.dial-center-overlay-data { 
-    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    z-index: 5; pointer-events: none; text-align: center; width: 100%;
-}
-
-.rpm-number {
-    font-size: 2.5rem; font-weight: 700; color: #fff; line-height: 1;
-    text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 0 10px rgba(0,0,0,1);
-}
+.rpm-number { font-size: 2.5rem; font-weight: 700; color: #fff; line-height: 1; text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 0 10px rgba(0,0,0,1); }
 .rpm-text { font-size: 0.8rem; color: var(--neon-cyan); font-weight: 700; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; }
 
-/* BLANQUEO DE TEXTOS */
 .title-white { color: #ffffff !important; font-weight: bold; font-size: 1.1rem; text-shadow: 0 0 5px rgba(255,255,255,0.5); }
 .title-white small { color: rgba(255,255,255,0.7) !important; font-size: 0.75rem; margin-left: 10px; }
-
 .label-white { color: #ffffff !important; text-shadow: 0 0 4px rgba(255,255,255,0.4); font-size: 0.7rem !important; }
 .text-white { color: #ffffff !important; text-shadow: 0 0 4px rgba(255,255,255,0.4); font-weight: 600; }
 
-/* COLORES Y SOMBRAS DEL PANEL DERECHO */
-.temp-val { font-size: 3rem; font-weight: 700; text-align: center; }
-.temp-val span { font-size: 0.9rem; margin-left: 5px; }
-
-#live-mvA { color: var(--axis-x-color); text-shadow: 0 0 15px rgba(255, 107, 0, 0.4); }
-#live-mvA span { color: var(--axis-x-color); text-shadow: none; }
-
-#live-mvB { color: var(--axis-y-color); text-shadow: 0 0 15px rgba(208, 112, 255, 0.4); }
-#live-mvB span { color: var(--axis-y-color); text-shadow: none; }
-
-/* CONFIGURACIÓN CASILLAS */
-.motor-settings-side { flex: 1; }
-.extra-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.motor-settings-side { flex: 1; width: 100%; box-sizing: border-box; }
+.extra-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; }
 .control-group { display: flex; flex-direction: column; justify-content: flex-start; }
-
-.control-group label { 
-    font-size: 0.65rem; text-transform: uppercase; font-weight: bold;
-    min-height: 2.5em; display: flex; align-items: flex-end; padding-bottom: 5px; line-height: 1.1;
-}
-
+.control-group label { font-size: 0.65rem; text-transform: uppercase; font-weight: bold; min-height: 2.5em; display: flex; align-items: flex-end; padding-bottom: 5px; line-height: 1.1; }
 input[type=number], select { background: rgba(0,0,0,0.4); border: none; border-bottom: 1px solid var(--neon-cyan); color: var(--neon-cyan); padding: 6px; font-family: 'Rajdhani'; outline: none; width: 100%; box-sizing: border-box; }
 
 .hud-separator { border: 0; border-top: 1px dashed rgba(255,255,255,0.1); margin: 15px 0; }
 
-.footer-data { margin-top: 20px; display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; font-family: monospace; }
-
-/* BOTÓN DEL SENSOR WITMOTION (FOOTER) */
-.btn-sensor-link {
-    background: rgba(0, 242, 255, 0.1);
-    border: 1px solid var(--neon-cyan);
-    color: var(--neon-cyan);
-    padding: 6px 15px;
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 0.8rem;
-    font-weight: bold;
-    letter-spacing: 1px;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: 0.3s;
-    text-transform: uppercase;
-    box-shadow: inset 0 0 5px rgba(0, 242, 255, 0.2);
+/* PANEL DERECHO - AJUSTE PERFECTO Y DISTRIBUCIÓN AUTOMÁTICA */
+.monitor-panel {
+    display: flex; flex-direction: column; justify-content: space-between; height: 100%; box-sizing: border-box;
 }
 
-.btn-sensor-link:hover {
-    background: var(--neon-cyan);
-    color: #000;
-    box-shadow: 0 0 15px var(--neon-cyan);
+.chart-area { height: 160px !important; margin-top: 20px; position: relative; width: 100%; }
+
+.dashboard-table-container { margin-top: 10px; max-height: 140px; overflow-y: auto; border: 1px solid var(--neon-cyan); background: rgba(0,0,0,0.6); }
+.dashboard-table-container table { width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: left; }
+.dashboard-table-container th { background: rgba(0, 242, 255, 0.15); color: var(--neon-cyan); padding: 8px 10px; position: sticky; top: 0; font-weight: bold; border-bottom: 1px solid var(--neon-cyan); }
+.dashboard-table-container td { padding: 6px 10px; border-bottom: 1px dashed rgba(255, 255, 255, 0.1); color: var(--text); }
+.dashboard-table-container td:first-child { font-weight: bold; color: #fff; }
+.dashboard-table-container td.desc { color: #a1a1aa; font-style: italic; }
+.table-val-true { color: #00ff95; font-weight: bold; }
+.table-val-false { color: #ff1030; font-weight: bold; }
+
+.telemetry-readouts { margin-top: 10px; display: flex; justify-content: space-around; width: 100%; }
+.temp-readout { text-align: center; }
+.temp-val { font-size: 3rem; font-weight: 700; text-align: center; }
+.temp-val span { font-size: 0.9rem; margin-left: 5px; }
+#live-mvA { color: var(--axis-x-color); text-shadow: 0 0 15px rgba(255, 107, 0, 0.4); }
+#live-mvA span { color: var(--axis-x-color); text-shadow: none; }
+#live-mvB { color: var(--axis-y-color); text-shadow: 0 0 15px rgba(208, 112, 255, 0.4); }
+#live-mvB span { color: var(--axis-y-color); text-shadow: none; }
+
+.system-console {
+    margin-top: 10px; height: 140px; min-height: 140px; max-height: 140px; background: #050505; border: 1px solid var(--neon-cyan); display: flex; flex-direction: column; box-shadow: inset 0 0 15px rgba(0, 242, 255, 0.1); width: 100%; box-sizing: border-box;
+}
+.console-header { background: #111; padding: 5px 10px; font-size: 0.75rem; color: #888; border-bottom: 1px solid #333; font-family: monospace; font-weight: bold; }
+.console-body { flex: 1; padding: 8px; font-family: 'Courier New', Courier, monospace; font-size: 0.75rem; overflow-y: auto; overflow-x: hidden; line-height: 1.4; }
+.console-body::-webkit-scrollbar { width: 6px; }
+.console-body::-webkit-scrollbar-track { background: transparent; }
+.console-body::-webkit-scrollbar-thumb { background: var(--neon-cyan); border-radius: 3px; }
+
+.footer-data { margin-top: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; font-family: monospace; width: 100%; }
+.btn-sensor-link { background: rgba(0, 242, 255, 0.1); border: 1px solid var(--neon-cyan); color: var(--neon-cyan); padding: 6px 15px; font-family: 'Rajdhani', sans-serif; font-size: 0.8rem; font-weight: bold; letter-spacing: 1px; cursor: pointer; border-radius: 4px; transition: 0.3s; text-transform: uppercase; box-shadow: inset 0 0 5px rgba(0, 242, 255, 0.2); }
+.btn-sensor-link:hover { background: var(--neon-cyan); color: #000; box-shadow: 0 0 15px var(--neon-cyan); }
+
+
+/* ==========================================================
+   MODO RESPONSIVE FLUIDO CON FLEXBOX (Tablets y Celulares)
+   ========================================================== */
+
+@media (max-width: 1150px) {
+    body { 
+        overflow-y: auto; 
+        overflow-x: hidden; 
+    }
+
+    /* 1. Contenedor principal cambia a Flexbox en 1 sola columna centrada */
+    .dashboard-grid {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 15px;
+        padding-bottom: 50px;
+        gap: 20px;
+        width: 100%;
+    }
+
+    /* 2. Los paneles ocupan el espacio pero no se estiran de más */
+    .hud-panel {
+        width: 100%;
+        max-width: 800px; /* Mantiene un ancho agradable en tablets */
+        display: flex;
+        flex-direction: column;
+        align-items: center; /* Centra el contenido interior */
+        box-sizing: border-box;
+    }
+
+    /* 3. Encabezado en columna y centrado */
+    .top-header { 
+        display: flex;
+        flex-direction: column; 
+        align-items: center;
+        justify-content: center;
+        padding: 15px 10px; 
+        gap: 10px; 
+        text-align: center; 
+    }
+    .header-logo { height: 45px; }
+
+    /* 4. El botón de pánico se ajusta al centro */
+    .btn-panic { 
+        width: 90%; 
+        max-width: 800px; 
+        margin: 0 auto 15px auto; 
+        display: block; 
+    }
+
+    /* 5. Consola maestra (Botones Power/Start) apilada */
+    .master-console {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        gap: 15px;
+    }
+    .master-console button { width: 100%; max-width: 400px; }
+
+    /* 6. Motores: Título, Dial y Ajustes todo en 1 columna centrada */
+    .motor-unit {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+    }
+    
+    .motor-control-layout {
+        display: flex;
+        flex-direction: column;
+        align-items: center; 
+        gap: 20px;
+        width: 100%;
+    }
+    
+    .circular-dial-container { width: 200px; height: 200px; }
+    .rpm-number { font-size: 2.2rem; }
+
+    .motor-settings-side {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+    }
+    
+    .extra-controls {
+        display: flex;
+        flex-direction: column; /* Pasa de 2 columnas a 1 sola */
+        align-items: center;
+        gap: 15px;
+        width: 100%;
+        max-width: 400px;
+    }
+
+    /* 7. Monitor Panel también centrado en columna */
+    .chart-area { width: 100%; max-width: 600px; }
+    
+    .dashboard-table-container { 
+        width: 100%; 
+        max-width: 600px; 
+        overflow-x: auto; 
+    }
+    .dashboard-table-container table { white-space: nowrap; font-size: 0.75rem; text-align: center; }
+    .dashboard-table-container th, .dashboard-table-container td { text-align: center; }
+
+    .telemetry-readouts {
+        display: flex;
+        flex-direction: column; /* Valores finales RPM apilados */
+        align-items: center;
+        gap: 15px;
+        width: 100%;
+    }
+
+    .system-console { width: 100%; max-width: 600px; }
+    
+    .footer-data { 
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+        width: 100%;
+        text-align: center;
+    }
+}
+
+/* ==========================================================
+   CELULARES MUY ESTRECHOS (< 600px)
+   ========================================================== */
+@media (max-width: 600px) {
+    .circular-dial-container { width: 160px; height: 160px; }
+    .rpm-number { font-size: 1.8rem; }
+    
+    .hud-panel { padding: 15px; }
+    .card-tag { left: 15px; } /* Ajuste de la etiqueta para que no se salga */
 }

@@ -1,13 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const loader = document.getElementById('loader');
-    const main = document.getElementById('main-content');
-    
-    let isPwrOn = false;
-    let isRunOn = false;
-    let autoDirTimers = { A: null, B: null };
+    let isPwrOn = false, isRunOn = false;
     let telemetryInterval;
+    
+    const ui = {
+        loader: document.getElementById('loader'), main: document.getElementById('main-content'),
+        console: document.getElementById('console-output'),
+        liveA: document.getElementById('live-mvA'), liveB: document.getElementById('live-mvB')
+    };
 
-    // Configuración de la gráfica de Chart.js
     const ctx = document.getElementById('telemetryChart').getContext('2d');
     const liveChart = new Chart(ctx, { 
         type: 'line', 
@@ -15,295 +15,200 @@ document.addEventListener('DOMContentLoaded', () => {
             { label: 'AXIS X', data: Array(30).fill(0), borderColor: '#ff6b00', borderWidth: 2, tension: 0.4, pointRadius: 0 },
             { label: 'AXIS Y', data: Array(30).fill(0), borderColor: '#d070ff', borderWidth: 2, tension: 0.4, pointRadius: 0 }
         ]}, 
-        options: { 
-            responsive: true, 
-            maintainAspectRatio: false, 
-            scales: { 
-                y: { 
-                    display: true,
-                    ticks: { color: '#ffffff', font: { weight: 'bold' } }, 
-                    grid: { color: 'rgba(255,255,255,0.1)' } 
-                }, 
-                x: { display: false } 
-            }, 
-            plugins: { legend: { display: false } }, 
-            animation: false 
-        } 
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { display: true, ticks: { color: '#ffffff' }, grid: { color: 'rgba(255,255,255,0.1)' } }, x: { display: false } }, plugins: { legend: { display: false } }, animation: false } 
     });
 
-    // Función de registro en la consola
-    function logToConsole(message, type = 'INFO') {
-        const consoleBody = document.getElementById('console-output');
-        const time = new Date().toLocaleTimeString();
-        const newEntry = document.createElement('div');
-        let typeColor = type === 'ERROR' || type === 'EMERGENCY' ? '#ff1030' : (type === 'POWER' || type === 'ENGINE' ? '#ff007f' : '#00f2ff');
-        newEntry.innerHTML = `<span style="color: rgba(255,255,255,0.4)">[${time}]</span> <span style="color: ${typeColor}; font-weight: bold;">[${type}]</span> ${message}`;
-        consoleBody.appendChild(newEntry);
-        consoleBody.scrollTop = consoleBody.scrollHeight;
-    }
+    const logToConsole = (msg, type = 'INFO') => {
+        let color = type === 'ERROR' || type === 'EMERGENCY' ? '#ff1030' : (type === 'POWER' || type === 'ENGINE' ? '#ff007f' : '#00f2ff');
+        const newLine = document.createElement('div');
+        newLine.innerHTML = `<span style="color:#71717a">[${new Date().toLocaleTimeString()}]</span> <span style="color:${color};font-weight:bold;">[${type}]</span> ${msg}`;
+        ui.console.appendChild(newLine);
+        while (ui.console.children.length > 40) ui.console.removeChild(ui.console.firstChild);
+        ui.console.scrollTop = ui.console.scrollHeight;
+    };
 
-    // RESET DE UI A 0
-    function resetUI() {
-        document.getElementById('valA-center').innerText = "0.0";
-        document.getElementById('valB-center').innerText = "0.0";
-        
-        document.getElementById('live-mvA').innerHTML = "0.00<span>RPM</span>";
-        document.getElementById('live-mvB').innerHTML = "0.00<span>RPM</span>";
+    const paramsConfig = [
+        { k: "Arrancar", desc: "Comando de arranque activo." }, 
+        { k: "Activar", desc: "Equipos habilitados (Power)." },
+        { k: "Velocidad", desc: "Velocidad física enviada al servomotor." }, 
+        { k: "Sentido", desc: "1=Horario, 2=Antihorario." },
+        { k: "Limite_Torque", desc: "Límite de fuerza establecido." }
+    ];
 
-        document.getElementById('mvA').value = "0.0";
-        document.getElementById('mvB').value = "0.0";
-        document.getElementById('autoDirA').value = "0";
-        document.getElementById('autoDirB').value = "0";
-        document.getElementById('torqueA').value = "0.0";
-        document.getElementById('torqueB').value = "0.0";
+    const initTable = () => {
+        document.getElementById('dashboard-table').innerHTML = `<table><thead><tr><th>Parámetro</th><th>V90 (A)</th><th>S210 (B)</th><th>Descripción</th></tr></thead><tbody id="tBody"></tbody></table>`;
+        document.getElementById('tBody').innerHTML = paramsConfig.map(p => `<tr id="row-${p.k}"><td>${p.k}</td><td class="v90">0</td><td class="s210">0</td><td class="desc">${p.desc}</td></tr>`).join('');
+    };
 
-        document.getElementById('dirA').value = "1";
-        document.getElementById('dirB').value = "1";
-        
-        // Planchar la gráfica a ceros
-        liveChart.data.datasets[0].data = Array(30).fill(0);
-        liveChart.data.datasets[1].data = Array(30).fill(0);
-        liveChart.update();
-        
-        logToConsole("UI Reset complete. All parameters at 0.", "RESET");
-    }
+    const updateTable = (d1, d2) => {
+        paramsConfig.forEach(p => {
+            const r = document.getElementById(`row-${p.k}`);
+            if(!r) return;
+            const format = (v) => typeof v === 'boolean' ? (v ? '<span class="table-val-true">TRUE</span>' : '<span class="table-val-false">FALSE</span>') : (typeof v === 'number' && !Number.isInteger(v) ? v.toFixed(2) : v);
+            r.querySelector('.v90').innerHTML = format(d1[p.k]);
+            r.querySelector('.s210').innerHTML = format(d2[p.k]);
+        });
+    };
+    initTable();
 
-    window.addEventListener('load', () => {
-        setTimeout(() => {
-            loader.style.opacity = '0';
-            setTimeout(() => { 
-                loader.style.display = 'none'; 
-                main.style.display = 'block'; 
-                logToConsole("System Initialized and ready.", "INFO");
-            }, 800);
-        }, 3200); 
-    });
+// --- ARRANQUE INMEDIATO DEL POLLING (Sin bloqueos) ---
+    setTimeout(() => { 
+        if (ui.loader) ui.loader.style.opacity = '0'; 
+        setTimeout(() => { 
+            if (ui.loader) ui.loader.style.display = 'none'; 
+            if (ui.main) ui.main.style.display = 'block'; 
+            logToConsole("System Initialized and ready.", "INFO"); 
+            startTelemetryPolling(); 
+        }, 800); 
+    }, 1500); // 1.5 segundos de carga fija y se abre el panel
 
-    window.togglePower = async () => {
-        isPwrOn = !isPwrOn;
-        const btn = document.getElementById('pwrBtn');
-        btn.classList.toggle('pwr-on', isPwrOn); 
-        btn.innerText = isPwrOn ? "SYSTEM POWER: ON" : "SYSTEM POWER: OFF";
+    // --- GESTIÓN DE PERMISOS VISUALES (Sin spam en la consola) ---
+    let lastPermissionStatus = null;
+    function updatePermissionBadge(isMaster) {
+        if (lastPermissionStatus === isMaster) return;
+        lastPermissionStatus = isMaster;
 
-        // Cambio dinámico del indicador de Telemetría (Rojo a Verde Neón)
-        const tel = document.getElementById('live-telemetry');
-        tel.className = isPwrOn ? 'live-indicator status-on' : 'live-indicator status-off';
-
-        logToConsole(`System Power set to ${isPwrOn ? 'ON' : 'OFF'}.`, "POWER");
-
-        try { 
-            await fetch(`http://127.0.0.1:8000/motor/power/${isPwrOn}`, { method: 'POST' }); 
-        } catch(e){}
-
-        if (!isPwrOn) {
-            stopSystem();
-            resetUI();
-            window.dispatchEvent(new CustomEvent('resetDials'));
+        const badge = document.getElementById('control-badge');
+        if(badge) {
+            badge.style.display = 'block';
+            if (isMaster) {
+                badge.style.border = "1px solid #00ff95";
+                badge.style.color = "#00ff95";
+                badge.style.background = "rgba(0, 255, 149, 0.1)";
+                badge.innerText = "👑 MODO MAESTRO";
+            } else {
+                badge.style.border = "1px solid var(--neon-red)";
+                badge.style.color = "var(--neon-red)";
+                badge.style.background = "rgba(255, 16, 48, 0.1)";
+                badge.innerText = "👁️ MODO OBSERVADOR (CONTROL OCUPADO)";
+            }
         }
+    }
+
+    // --- BOTONES: Solo mandan peticiones, no manipulan el UI directo ---
+    window.togglePower = async () => {
+        let desiredState = !isPwrOn;
+        try { 
+            const res = await fetch(`/motor/power/${desiredState}`, { method: 'POST' }); 
+            const data = await res.json();
+            if (data.status === "DENIED") logToConsole("Acceso denegado: Observador activo.", "ERROR");
+        } catch(e) {}
     };
 
     window.toggleStart = async () => {
         if(!isPwrOn) return alert("ACTIVATE SYSTEM POWER FIRST");
-        isRunOn = !isRunOn;
-        const btn = document.getElementById('strBtn');
-        btn.classList.toggle('str-on', isRunOn); 
-        btn.innerText = isRunOn ? "ENGINE: RUNNING" : "START ENGINE";
-
-        logToConsole(isRunOn ? "Engine started. Telemetry active." : "Engine stopped.", "ENGINE");
-
+        let desiredState = !isRunOn;
         try { 
-            await fetch(`http://127.0.0.1:8000/motor/start/${isRunOn}`, { method: 'POST' }); 
-        } catch(e){}
-
-        if (isRunOn) {
-            startTelemetryPolling();
-        } else {
-            stopSystem();
-            resetUI();
-            window.dispatchEvent(new CustomEvent('resetDials'));
-        }
+            const res = await fetch(`/motor/start/${desiredState}`, { method: 'POST' }); 
+            const data = await res.json();
+            if (data.status === "DENIED") logToConsole("Acceso denegado: Observador activo.", "ERROR");
+        } catch(e) {}
     };
 
-    function stopSystem() {
-        isRunOn = false;
-        clearInterval(telemetryInterval);
-        const btn = document.getElementById('strBtn');
-        btn.classList.remove('str-on');
-        btn.innerText = 'START ENGINE';
-        logToConsole("System operations halted.");
-    }
-
-    async function sendToPLC(motor, val) {
-        try { await fetch(`http://127.0.0.1:8000/control/${motor}/${val}`, { method: 'POST' }); } catch(e){}
-    }
-
-    window.updateExtras = async (motor) => {
-        const s = document.getElementById(`dir${motor}`).value;
-        const r = document.getElementById(`mv${motor}`).value;
-        const t = document.getElementById(`torque${motor}`).value;
-        logToConsole(`Settings updated for Axis ${motor}.`, "UPDATE");
-        try { await fetch(`http://127.0.0.1:8000/extra/${motor}/${s}/${r}/${t}`, { method: 'POST' }); } catch(e){}
-    };
-
-    window.updateAutoDir = (motor) => {
-        const sec = parseFloat(document.getElementById(`autoDir${motor}`).value);
-        logToConsole(`Auto direction time set to ${sec}s for Axis ${motor}.`, "UPDATE");
-        if(autoDirTimers[motor]) clearInterval(autoDirTimers[motor]); 
-        if(sec >= 1) {
-            autoDirTimers[motor] = setInterval(() => {
-                const dirSelect = document.getElementById(`dir${motor}`);
-                dirSelect.value = (dirSelect.value === "1") ? "2" : "1";
-                window.updateExtras(motor);
-            }, sec * 1000); 
-        }
-    };
-
-    function setupMotor(id) {
-        const cid = id === 'A' ? 'dialXContainer' : 'dialYContainer';
-        const dial = document.getElementById(cid);
-        const needle = dial.querySelector('.dial-needle-container');
-        const readout = document.getElementById('val' + id + '-center');
-        const bgRotator = document.getElementById('bgRotator' + id);
-        
-        const MAX_RPM = 10;
-        let tAxis; 
-        let isDragging = false;
-        let currentRPM = 0.0; 
-
-        const checkRotationStatus = () => {
-            if (isPwrOn && isRunOn && currentRPM > 0) {
-                let speed = 20 / currentRPM; 
-                bgRotator.style.animationDuration = `${speed}s`;
-                
-                const dirSelect = document.getElementById(`dir${id}`);
-                bgRotator.style.animationDirection = dirSelect && dirSelect.value === "2" ? "reverse" : "normal";
-            } else {
-                bgRotator.style.animationDuration = '0s'; 
+    window.updateExtras = async (m) => {
+        try { 
+            const res = await fetch(`/extra/${m}/${document.getElementById(`dir${m}`).value}/${document.getElementById(`mv${m}`).value}/${document.getElementById(`torque${m}`).value}`, { method: 'POST' }); 
+            const data = await res.json();
+            if (data.status === "DENIED") {
+                document.getElementById(`mv${m}`).value = "0.0";
+                document.getElementById(`torque${m}`).value = "0.0";
             }
-        };
+        } catch(e){}
+    };
 
-        setInterval(checkRotationStatus, 100);
+    // --- DIALES INTELIGENTES ---
+    function setupMotor(id) {
+        const dial = document.getElementById(`dial${id === 'A' ? 'X' : 'Y'}Container`).firstElementChild;
+        const needle = dial.querySelector('.dial-needle-container');
+        const readout = document.getElementById(`val${id}-center`);
+        const bgRotator = document.getElementById(`bgRotator${id}`);
+        let tAxis, isDragging = false, currentRPM = 0.0;
 
-        const updateDialUI = (rpm, forceReset = false) => {
-            if (!forceReset && Math.abs(rpm - currentRPM) > 8.5) return; 
+        setInterval(() => { bgRotator.style.animationDuration = (isPwrOn && isRunOn && currentRPM > 0) ? `${20/currentRPM}s` : '0s'; }, 100);
 
-            currentRPM = rpm;
-            readout.innerText = currentRPM.toFixed(1);
+        const updateDialUI = (rpm, sendToServer = true) => {
+            currentRPM = rpm; 
+            readout.innerText = currentRPM.toFixed(1); 
+            needle.style.transform = `rotate(${(currentRPM/10)*360}deg)`;
             
-            const angle = (currentRPM / MAX_RPM) * 360;
-            needle.style.transform = `rotate(${angle}deg)`;
-
-            clearTimeout(tAxis);
-            tAxis = setTimeout(()=>sendToPLC(id, currentRPM.toFixed(1)), 300);
+            if (sendToServer) {
+                clearTimeout(tAxis); 
+                tAxis = setTimeout(async () => {
+                    try {
+                        const res = await fetch(`/control/${id}/${currentRPM.toFixed(1)}`, { method: 'POST' });
+                        const data = await res.json();
+                        if (data.status === "DENIED") updateDialUI(0, false); // Efecto resorte si es observador
+                    } catch(e){}
+                }, 250);
+            }
         };
 
         const onMove = (e) => {
-            if (!isDragging) return;
-            e.preventDefault(); 
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            const rect = dial.getBoundingClientRect();
-            const cx = rect.left + rect.width / 2;
-            const cy = rect.top + rect.height / 2;
+            if (!isDragging) return; e.preventDefault();
+            const rect = dial.getBoundingClientRect(), cx = rect.left + rect.width/2, cy = rect.top + rect.height/2;
+            let theta = Math.atan2((e.touches?e.touches[0].clientY:e.clientY)-cy, (e.touches?e.touches[0].clientX:e.clientX)-cx)*180/Math.PI + 90;
+            if (theta < 0) theta += 360;
+            
+            let newRPM = (theta / 360) * 10;
+            if (currentRPM > 8.0 && newRPM < 2.0) newRPM = 10.0;
+            else if (currentRPM < 2.0 && newRPM > 8.0) newRPM = 0.0;
+            if (newRPM >= 9.8) newRPM = 10.0;
+            if (newRPM <= 0.2) newRPM = 0.0;
 
-            let theta = Math.atan2(clientY - cy, clientX - cx) * 180 / Math.PI;
-            if (theta < 0) theta = 360 + theta;
-            theta = (theta + 90) % 360;
-            const rpm = (theta / 360) * MAX_RPM;
-            updateDialUI(rpm);
+            updateDialUI(newRPM, true);
         };
 
-        dial.addEventListener('mousedown', () => isDragging = true);
-        window.addEventListener('mouseup', () => isDragging = false);
-        window.addEventListener('mousemove', onMove);
-        dial.addEventListener('touchstart', () => isDragging = true, {passive: false});
-        window.addEventListener('touchend', () => isDragging = false);
-        window.addEventListener('touchmove', onMove, {passive: false});
-
-        window.addEventListener('resetDials', () => {
-            updateDialUI(0.0, true); 
-        });
-
-        updateDialUI(0.0, true);
+        dial.addEventListener('mousedown', () => isDragging = true); window.addEventListener('mouseup', () => isDragging = false); window.addEventListener('mousemove', onMove);
+        dial.addEventListener('touchstart', () => isDragging = true, {passive:false}); window.addEventListener('touchend', () => isDragging = false); window.addEventListener('touchmove', onMove, {passive:false});
+        
+        window.addEventListener('resetDials', () => updateDialUI(0, false)); 
+        updateDialUI(0, false);
     }
-    
-    setupMotor('A'); 
-    setupMotor('B');
+    setupMotor('A'); setupMotor('B');
 
-    // Polling de telemetría a la API
+    // --- CEREBRO DE SINCRONIZACIÓN (El Servidor Manda) ---
     function startTelemetryPolling() {
         telemetryInterval = setInterval(async () => {
             try {
-                const res = await fetch('http://127.0.0.1:8000/telemetry');
-                const data = await res.json();
-                if (data.status === "OK") {
-                    document.getElementById('live-mvA').innerHTML = `${data.v90_mv.toFixed(2)}<span>RPM</span>`;
-                    document.getElementById('live-mvB').innerHTML = `${data.s210_mv.toFixed(2)}<span>RPM</span>`;
-                    liveChart.data.datasets[0].data.push(data.v90_mv); liveChart.data.datasets[0].data.shift();
-                    liveChart.data.datasets[1].data.push(data.s210_mv); liveChart.data.datasets[1].data.shift();
+                const res = await fetch('/telemetry'); const d = await res.json();
+                if (d.status === "OK") {
+                    const vA = Math.abs(d.v90.Velocidad_Hacia || 0), vB = Math.abs(d.s210.Velocidad_Hacia || 0);
+                    ui.liveA.innerHTML = `${vA.toFixed(2)}<span>RPM</span>`; 
+                    ui.liveB.innerHTML = `${vB.toFixed(2)}<span>RPM</span>`;
+                    liveChart.data.datasets[0].data.push(vA); liveChart.data.datasets[0].data.shift();
+                    liveChart.data.datasets[1].data.push(vB); liveChart.data.datasets[1].data.shift();
                     liveChart.update();
+                    updateTable(d.v90, d.s210);
+                    
+                    // Sincronizar botones de Poder y Arranque con el estado REAL del PLC
+                    isPwrOn = d.v90.Activar;
+                    isRunOn = d.v90.Arrancar;
+
+                    const btnPwr = document.getElementById('pwrBtn');
+                    if (btnPwr.classList.contains('pwr-on') !== isPwrOn) {
+                        btnPwr.classList.toggle('pwr-on', isPwrOn);
+                        btnPwr.innerText = isPwrOn ? "SYSTEM POWER: ON" : "SYSTEM POWER: OFF";
+                        document.getElementById('live-telemetry').className = isPwrOn ? 'live-indicator status-on' : 'live-indicator status-off';
+                        if(!isPwrOn) window.dispatchEvent(new CustomEvent('resetDials'));
+                    }
+
+                    const btnStr = document.getElementById('strBtn');
+                    if (btnStr.classList.contains('str-on') !== isRunOn) {
+                        btnStr.classList.toggle('str-on', isRunOn);
+                        btnStr.innerText = isRunOn ? "ENGINE: RUNNING" : "START ENGINE";
+                    }
+                    
+                    // Actualizar el cartel de permisos basado en lo que dice Python
+                    if (d.is_master !== undefined) updatePermissionBadge(d.is_master);
                 }
-            } catch (e) { }
-        }, 200);
+            } catch (e) {}
+        }, 300);
     }
 
-    // BOTÓN DE PÁNICO
     document.getElementById('panicButton').onclick = async () => {
         try { 
-            await fetch('http://127.0.0.1:8000/emergency', { method: 'POST' }); 
-        } catch(e) {
-            console.error("Error en conexión PLC durante emergencia");
-        }
-
-        isPwrOn = false; isRunOn = false;
-        const pwrBtn = document.getElementById('pwrBtn');
-        const strBtn = document.getElementById('strBtn');
-        pwrBtn.classList.remove('pwr-on'); pwrBtn.innerText = "SYSTEM POWER: OFF";
-        strBtn.classList.remove('str-on'); strBtn.innerText = "START ENGINE";
-        document.getElementById('live-telemetry').className = 'live-indicator status-off';
-
-        logToConsole("EMERGENCY RESET ACTIVATED. ALL SYSTEMS HALTED.", "EMERGENCY");
-
-        ['A', 'B'].forEach(motor => {            
-            if(autoDirTimers[motor]) { 
-                clearInterval(autoDirTimers[motor]); 
-                autoDirTimers[motor] = null; 
-            }
-        });
-
-        window.dispatchEvent(new CustomEvent('resetDials'));
-        resetUI();
-        stopSystem();
+            await fetch('/emergency', { method: 'POST' }); 
+        } catch(e){}
+        logToConsole("EMERGENCY COMMAND SENT.", "EMERGENCY"); 
     };
-});
-
-// --- PUENTE DE ESCUCHA: DATOS EN VIVO DESDE WITMOTION ---
-window.addEventListener('message', (event) => {
-    const msg = event.data;
-    
-    // Validamos que el mensaje sea el que nos interesa
-    if (msg && msg.type === 'WITMOTION_TELEMETRY') {
-        const data = msg.payload;
-
-        // 1. Encender indicador LIVE TELEMETRY si estaba apagado
-        const liveIndicator = document.getElementById('live-telemetry');
-        if (liveIndicator && liveIndicator.classList.contains('status-off')) {
-            liveIndicator.className = "live-indicator status-on";
-        }
-
-        // 2. Imprimir datos en la consola SCADA del HUD
-        const consoleOutput = document.getElementById('console-output');
-        if (consoleOutput) {
-            const logLine = document.createElement('div');
-            logLine.innerHTML = `<span style="color:#71717a">[${data.timestamp}]</span> <span style="color:#00f2ff">[BLE SENSOR]</span> Ángulos -> X: <b>${data.pitch}°</b> | Y: <b>${data.roll}°</b>`;
-            
-            consoleOutput.appendChild(logLine);
-            consoleOutput.scrollTop = consoleOutput.scrollHeight; // Auto-scroll
-            
-            // Limitar a 30 líneas para no saturar el DOM del iframe
-            if (consoleOutput.children.length > 30) {
-                consoleOutput.removeChild(consoleOutput.firstChild);
-            }
-        }
-    }
 });

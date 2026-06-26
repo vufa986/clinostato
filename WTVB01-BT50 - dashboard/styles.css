@@ -12,8 +12,23 @@ body { font-family: system-ui, sans-serif; background: var(--bg-base); color: wh
 .nav-tab { color: var(--gray); padding: 12px 20px; cursor: pointer; font-weight: 600; white-space: nowrap; }
 .nav-tab.active { color: var(--blue); border-bottom: 3px solid var(--blue); }
 
-.device-header { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: var(--bg-card); font-weight: 500; border-bottom: 1px solid var(--border); }
-.status-info { display: flex; align-items: center; gap: 15px; }
+.device-header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    padding: 15px; 
+    background: var(--bg-card); 
+    font-weight: 500; 
+    border-bottom: 1px solid var(--border); 
+    flex-wrap: wrap; /* Permite que el contenido baje si no hay espacio */
+    gap: 15px;
+}
+.status-info { 
+    display: flex; 
+    align-items: center; 
+    gap: 15px; 
+    flex-wrap: wrap;
+}
 .badge { font-size: 12px; padding: 4px 10px; border-radius: 20px; font-weight: bold; transition: all 0.3s; }
 .badge.log-active { background: rgba(239, 68, 68, 0.2); color: var(--red); border: 1px solid var(--red); animation: pulse 2s infinite; }
 .badge.log-inactive { background: rgba(161, 161, 170, 0.2); color: var(--gray); border: 1px solid transparent; }
@@ -24,7 +39,11 @@ body { font-family: system-ui, sans-serif; background: var(--bg-base); color: wh
     100% { opacity: 1; }
 }
 
-.action-group { display: flex; gap: 10px; }
+.action-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap; /* Evita que los botones sean empujados fuera de la pantalla */
+}
 .btn-action { border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
 .btn-action.connect { background: var(--blue); color: white; }
 .btn-action.connect:disabled { background: #166534; color: #a7f3d0; cursor: default; }
@@ -335,7 +354,8 @@ body { font-family: system-ui, sans-serif; background: var(--bg-base); color: wh
 
 .kpi-row {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    /* Magia responsive: Crea tantas columnas de mínimo 120px como quepan en la pantalla */
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     gap: 15px;
 }
 
@@ -361,4 +381,95 @@ body { font-family: system-ui, sans-serif; background: var(--bg-base); color: wh
     flex: 1;
     min-height: 320px;
     border: 1px solid var(--border);
+}
+
+/* --- PANEL DE FÓRMULAS MATEMÁTICAS --- */
+.math-panel {
+    background: #121214;
+    border: 1px solid #27272a;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+.math-header { color: var(--gray); font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+.math-live-vars { font-family: monospace; font-size: 14px; color: #d4d4d8; }
+.val-x { color: var(--blue); }
+.val-y { color: #eab308; }
+.math-matrix-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 15px;
+    color: #a1a1aa;
+    background: #09090b;
+    padding: 10px 20px;
+    border-radius: 6px;
+    border: 1px solid #18181b;
+}
+.matrix-bracket { font-size: 55px; font-weight: 300; color: #3282f6; line-height: 0.8; }
+.matrix-col { display: flex; flex-direction: column; gap: 8px; text-align: center; }
+.formula-col span { color: #71717a; }
+.result-col span { font-weight: bold; color: var(--green); }
+.math-term { font-size: 18px; font-weight: bold; color: white; }
+
+/* ==========================================================================
+   LAYOUT ESPECÍFICO PARA TASMG 3D
+   ========================================================================== */
+.tasmg-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Dos columnas exactamente iguales */
+    gap: 20px;
+    margin-top: 15px;
+    align-items: stretch; /* Obliga a ambas columnas a tener la misma altura */
+}
+
+@media (max-width: 1200px) {
+    .tasmg-grid { grid-template-columns: 1fr; } /* Se apila en pantallas pequeñas */
+}
+
+.tasmg-col {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Contenedor estricto para que Plotly no desborde */
+.tasmg-chart-wrapper {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    height: 420px; /* Altura fija para sincronía visual */
+    position: relative;
+}
+
+.tasmg-chart-wrapper .plotly-container {
+    flex: 1;
+    width: 100%;
+    height: 100%; /* Obliga a llenar el espacio */
+    min-height: 350px; /* ¡El candado! Evita que colapse a 0 */
+}
+
+/* Ajustes finos para las matrices matemáticas */
+.math-matrix-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 15px;
+    color: #a1a1aa;
+    background: #09090b;
+    padding: 12px 25px;
+    border-radius: 6px;
+    border: 1px solid #18181b;
+    box-shadow: inset 0 4px 10px rgba(0,0,0,0.5); /* Efecto de pantalla hundida */
 }
