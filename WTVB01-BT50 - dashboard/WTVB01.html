@@ -29,7 +29,12 @@
     </div>
 
     <div class="content">
-<div id="tab-main" class="tab-content active">
+    <div class="content">
+        <div id="tab-hud" class="tab-content" style="height: calc(100vh - 120px); padding:0;">
+            <iframe id="hudFrame" src="../index.html" style="width:100%; height:100%; border:none; display:block;"></iframe>
+        </div>
+    </div>
+    <div id="tab-main" class="tab-content active">
             <div class="data-grid">
                 <div class="grid-item"><div class="val-group"><span class="val" id="ax">0.0</span><span class="unit">°</span></div><div class="label">Ángulo X</div></div>
                 <div class="grid-item"><div class="val-group"><span class="val" id="ay">0.0</span><span class="unit">°</span></div><div class="label">Ángulo Y</div></div>

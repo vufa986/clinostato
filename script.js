@@ -276,3 +276,34 @@ document.addEventListener('DOMContentLoaded', () => {
         stopSystem();
     };
 });
+
+// --- PUENTE DE ESCUCHA: DATOS EN VIVO DESDE WITMOTION ---
+window.addEventListener('message', (event) => {
+    const msg = event.data;
+    
+    // Validamos que el mensaje sea el que nos interesa
+    if (msg && msg.type === 'WITMOTION_TELEMETRY') {
+        const data = msg.payload;
+
+        // 1. Encender indicador LIVE TELEMETRY si estaba apagado
+        const liveIndicator = document.getElementById('live-telemetry');
+        if (liveIndicator && liveIndicator.classList.contains('status-off')) {
+            liveIndicator.className = "live-indicator status-on";
+        }
+
+        // 2. Imprimir datos en la consola SCADA del HUD
+        const consoleOutput = document.getElementById('console-output');
+        if (consoleOutput) {
+            const logLine = document.createElement('div');
+            logLine.innerHTML = `<span style="color:#71717a">[${data.timestamp}]</span> <span style="color:#00f2ff">[BLE SENSOR]</span> Ángulos -> X: <b>${data.pitch}°</b> | Y: <b>${data.roll}°</b>`;
+            
+            consoleOutput.appendChild(logLine);
+            consoleOutput.scrollTop = consoleOutput.scrollHeight; // Auto-scroll
+            
+            // Limitar a 30 líneas para no saturar el DOM del iframe
+            if (consoleOutput.children.length > 30) {
+                consoleOutput.removeChild(consoleOutput.firstChild);
+            }
+        }
+    }
+});
