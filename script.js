@@ -18,7 +18,11 @@ document.addEventListener('DOMContentLoaded', () => {
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { display: true, ticks: { color: '#ffffff' }, grid: { color: 'rgba(255,255,255,0.1)' } }, x: { display: false } }, plugins: { legend: { display: false } }, animation: false } 
     });
 
+    // Sutil modificación en script.js para proteger la consola visual
     const logToConsole = (msg, type = 'INFO') => {
+        // Si el sistema está en producción, ignoramos los mensajes repetitivos de polling
+        if (!DEVELOPMENT_MODE && type === 'DEBUG_POLLING') return;
+
         let color = type === 'ERROR' || type === 'EMERGENCY' ? '#ff1030' : (type === 'POWER' || type === 'ENGINE' ? '#ff007f' : '#00f2ff');
         const newLine = document.createElement('div');
         newLine.innerHTML = `<span style="color:#71717a">[${new Date().toLocaleTimeString()}]</span> <span style="color:${color};font-weight:bold;">[${type}]</span> ${msg}`;

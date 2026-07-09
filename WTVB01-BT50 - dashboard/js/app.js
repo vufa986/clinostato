@@ -1,8 +1,8 @@
 import { WitMotionBLE } from './SensorBLE.js';
 import { ChartManager } from './ChartManager.js';
 
-// Cabecera unificada y completa para los reportes de telemetría (17 Columnas)
-const CSV_HEADER = "Timestamp,VelX,VelY,VelZ,VelRMS,AngleX,AngleY,AngleZ,Temp,DispX,DispY,DispZ,DispRMS,FreqX,FreqY,FreqZ,Battery";
+// Cabecera unificada y completa para los reportes de telemetría
+const CSV_HEADER = "Timestamp,VelX,VelY,VelZ,VelRMS,AngleX,AngleY,AngleZ,Temp,DispX,DispY,DispZ,DispRMS,FreqX,FreqY,FreqZ,Battery,MPU_GX,MPU_GY,MPU_GZ";
 
 const colors = { x: '#3282f6', y: '#eab308', z: '#10b981' };
 const angleChart = new ChartManager('angleChart', colors);
@@ -93,17 +93,23 @@ sensor = new WitMotionBLE(
         }
 
         if (isLogging) {
-            // Calculamos los valores globales combinados para que queden plasmados en el reporte
             const vRms = Math.sqrt(data.vel.x**2 + data.vel.y**2 + data.vel.z**2).toFixed(1);
             const dRms = Math.sqrt(data.disp.x**2 + data.disp.y**2 + data.disp.z**2).toFixed(0);
             const battery = data.battery || 100;
 
-            // Almacenamos la trama de 17 columnas perfectamente alineada con el CSV_HEADER
+            // 2. Extraer datos del ESP32 (taSMG) pasados por renderUI
+            // (Asegurándonos de no fallar si no existen aún)
+            const mpu_gx = (data.tasmg && data.tasmg.gx) ? data.tasmg.gx.toFixed(4) : "0.0000";
+            const mpu_gy = (data.tasmg && data.tasmg.gy) ? data.tasmg.gy.toFixed(4) : "0.0000";
+            const mpu_gz = (data.tasmg && data.tasmg.gz) ? data.tasmg.gz.toFixed(4) : "0.0000";
+
+            // 3. Modifica el bloque dataLog.push (Línea 75 aprox.)
             dataLog.push(
                 `${data.timestamp},${data.vel.x},${data.vel.y},${data.vel.z},${vRms},` +
                 `${data.angle.x},${data.angle.y},${data.angle.z},${data.temp},` +
                 `${data.disp.x},${data.disp.y},${data.disp.z},${dRms},` +
-                `${data.freq.x},${data.freq.y},${data.freq.z},${battery}`
+                `${data.freq.x},${data.freq.y},${data.freq.z},${battery},` +
+                `${mpu_gx},${mpu_gy},${mpu_gz}` // <- Nuevos valores añadidos aquí
             );
             
             recordCount.innerText = dataLog.length - 1;

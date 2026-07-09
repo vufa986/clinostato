@@ -14,8 +14,10 @@ import os
 import math
 import glob
 from bleak import BleakClient, BleakScanner
+from contextlib import asynccontextmanager
 import socket
 import json
+import sys
 import logging
 
 # =============================================================================
@@ -30,6 +32,29 @@ WITMOTION_CHAR_UUID    = "0000ffe4-0000-1000-8000-00805f9a34fb"
 
 plc_lock = threading.Lock()
 LOCK_TIMEOUT = 0.3  # Máximo tiempo que esperará la web (Evita que se congele)
+
+# Configuración de Logging Profesional
+LOG_FORMAT = "%(asctime)s [%(levelname)s] %(message)s"
+
+# Crear logger personalizado
+logger = logging.getLogger("NexusSCADA")
+
+# Nivel de entorno: cambia a logging.DEBUG en desarrollo, logging.WARNING en producción
+DEBUG_MODE = False
+
+if DEBUG_MODE:
+    # En desarrollo, ver todo detallado por pantalla
+    logging.basicConfig(level=logging.DEBUG, format=LOG_FORMAT)
+else:
+    # En producción, guardar la depuración pesada en un archivo oculto y limpiar la consola
+    logging.basicConfig(
+        level=logging.INFO,
+        format=LOG_FORMAT,
+        handlers=[
+            logging.FileHandler("debug.log", encoding="utf-8"),
+            logging.StreamHandler(sys.stdout) # Solo mensajes importantes por consola
+        ]
+    )
 
 app = FastAPI()
 
@@ -246,20 +271,47 @@ def forzar_reseteo_plc():
     else:
         print("[SISTEMA] No se detectó PLC en el arranque.")
 
+# Reemplaza estas funciones en tu backend principal
+
 def background_plc_poller():
+    """Poller optimizado que lee todo el DB3 en un solo viaje de red (Bulk Read)"""
     time.sleep(2) 
     while True:
         conectar_seguro()
         if plc.get_connected():
             try:
-                telemetria_cache["v90"] = leer_parametros(OFFSETS_V90)
-                telemetria_cache["s210"] = leer_parametros(OFFSETS_S210)
+                # 1. Una sola petición de red para bajar los 44 bytes del DB3
+                with plc_lock:
+                    buffer_db = plc.read_area(Areas.DB, DB_NUMBER, 0, 44)
+                
+                # 2. Decodificación local instantánea en memoria RAM (Sin latencia de red)
+                telemetria_cache["v90"] = {
+                    "Arrancar": get_bool(buffer_db, 0, 0),
+                    "Activar": get_bool(buffer_db, 6, 0),
+                    "Reset_Alarm": get_bool(buffer_db, 6, 1),
+                    "Velocidad": get_real(buffer_db, 2),
+                    "Velocidad_Hacia": get_real(buffer_db, 8),
+                    "Sentido": get_int(buffer_db, 12),
+                    "Rango_Aleatorio": get_real(buffer_db, 14),
+                    "Limite_Torque": get_real(buffer_db, 18)
+                }
+                
+                telemetria_cache["s210"] = {
+                    "Arrancar": get_bool(buffer_db, 22, 0),
+                    "Activar": get_bool(buffer_db, 28, 0),
+                    "Reset_Alarm": get_bool(buffer_db, 28, 1),
+                    "Velocidad": get_real(buffer_db, 24),
+                    "Velocidad_Hacia": get_real(buffer_db, 30),
+                    "Sentido": get_int(buffer_db, 34),
+                    "Rango_Aleatorio": get_real(buffer_db, 36),
+                    "Limite_Torque": get_real(buffer_db, 40)
+                }
                 telemetria_cache["status"] = "OK"
             except Exception:
                 telemetria_cache["status"] = "ERROR"
         else:
             telemetria_cache["status"] = "OFFLINE"
-        time.sleep(0.2) 
+        time.sleep(0.15) # Puedes bajar el intervalo de forma segura gracias a la optimización
 
 # =============================================================================
 #  OÍDO UDP PARA EL ESP32 (taSMG)
@@ -357,11 +409,13 @@ def witmotion_rx_handler(sender, data: bytearray):
                 vRms = round(math.sqrt(sensor_cache["vel"]["x"]**2 + sensor_cache["vel"]["y"]**2 + sensor_cache["vel"]["z"]**2), 1)
                 dRms = round(math.sqrt(sensor_cache["disp"]["x"]**2 + sensor_cache["disp"]["y"]**2 + sensor_cache["disp"]["z"]**2), 0)
                 
+                # Filas actualizadas fusionando WTVB01 + MPU6050 (taSMG)
                 row = [
                     sensor_cache["timestamp"], sensor_cache["vel"]["x"], sensor_cache["vel"]["y"], sensor_cache["vel"]["z"], vRms,
                     sensor_cache["angle"]["x"], sensor_cache["angle"]["y"], sensor_cache["angle"]["z"], sensor_cache["temp"],
                     sensor_cache["disp"]["x"], sensor_cache["disp"]["y"], sensor_cache["disp"]["z"], dRms,
-                    sensor_cache["freq"]["x"], sensor_cache["freq"]["y"], sensor_cache["freq"]["z"], sensor_cache["battery"]
+                    sensor_cache["freq"]["x"], sensor_cache["freq"]["y"], sensor_cache["freq"]["z"], sensor_cache["battery"],
+                    tasmg_data["gx"], tasmg_data["gy"], tasmg_data["gz"]  # <- Datos del ESP32 añadidos
                 ]
                 with open(csv_filename, mode='a', newline='') as f:
                     csv.writer(f).writerow(row)
@@ -401,20 +455,20 @@ def arrancar_bluetooth_aislado():
     asyncio.set_event_loop(b_loop)
     b_loop.run_until_complete(witmotion_loop())
 
-@app.on_event("startup")
-async def startup_event():
-    # 1. Hilo 0: Limpiar PLC al iniciar
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # --- Eventos de Arranque ---
     threading.Thread(target=forzar_reseteo_plc, daemon=True).start()
-    
-    # 2. PLC Poller (Hilo 1)
     threading.Thread(target=background_plc_poller, daemon=True).start()
-    
-    # 3. UDP Listener para MPU6050 (Hilo 2)
     threading.Thread(target=esp32_udp_listener, daemon=True).start()
-    
-    # 4. Bluetooth Scanner (Hilo 3)
     threading.Thread(target=arrancar_bluetooth_aislado, daemon=True).start()
+    yield
+    # --- Eventos de Apagado (Opcional) ---
+    if plc.get_connected():
+        plc.disconnect()
     
+app = FastAPI(lifespan=lifespan)
+
 # =============================================================================
 #  RUTAS WEB Y API REST
 # =============================================================================
@@ -449,19 +503,26 @@ def toggle_sensor_log(state: bool, request: Request):
         tasmg_data["count"] = 0; tasmg_data["taSMG_val"] = 1.0
 
         csv_record_count = 0 
-        csv_filename = f"telemetria_wtvb01_{int(time.time())}.csv"
+        
+        # Crear directorio si no existe (según tu estructura de carpetas)
+        os.makedirs("registros_csv", exist_ok=True)
+        # Rutear el archivo a la carpeta registros_csv
+        csv_filename = os.path.join("registros_csv", f"telemetria_scada_{int(time.time())}.csv")
+        
         with open(csv_filename, mode='w', newline='') as f:
-            f.write("Timestamp,VelX,VelY,VelZ,VelRMS,AngleX,AngleY,AngleZ,Temp,DispX,DispY,DispZ,DispRMS,FreqX,FreqY,FreqZ,Battery\n")
+            # Añadidos los 3 ejes del MPU6050 a la cabecera
+            f.write("Timestamp,VelX,VelY,VelZ,VelRMS,AngleX,AngleY,AngleZ,Temp,DispX,DispY,DispZ,DispRMS,FreqX,FreqY,FreqZ,Battery,MPU_GX,MPU_GY,MPU_GZ\n")
         return {"status": "OK", "msg": f"Grabando en PC: {csv_filename}"}
     else:
         return {"status": "OK", "msg": "Grabación detenida"}
 
 @app.get("/descargar_csv")
 def descargar_ultimo_csv():
-    archivos_csv = glob.glob("telemetria_wtvb01_*.csv")
+    # Buscar dentro del directorio correcto
+    archivos_csv = glob.glob(os.path.join("registros_csv", "telemetria_scada_*.csv"))
     if not archivos_csv: return {"status": "ERROR", "msg": "No hay archivos generados aún."}
     ultimo_archivo = max(archivos_csv, key=os.path.getctime)
-    return FileResponse(ultimo_archivo, media_type="text/csv", filename=ultimo_archivo)
+    return FileResponse(ultimo_archivo, media_type="text/csv", filename=os.path.basename(ultimo_archivo))
 
 @app.get("/telemetry")
 def read_telemetry(request: Request):
