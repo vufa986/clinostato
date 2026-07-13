@@ -1,4 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // --- MODO DE DESARROLLO ---
+    const DEVELOPMENT_MODE = false; 
+
     let isPwrOn = false, isRunOn = false;
     let telemetryInterval;
     
@@ -18,9 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { display: true, ticks: { color: '#ffffff' }, grid: { color: 'rgba(255,255,255,0.1)' } }, x: { display: false } }, plugins: { legend: { display: false } }, animation: false } 
     });
 
-    // Sutil modificación en script.js para proteger la consola visual
     const logToConsole = (msg, type = 'INFO') => {
-        // Si el sistema está en producción, ignoramos los mensajes repetitivos de polling
         if (!DEVELOPMENT_MODE && type === 'DEBUG_POLLING') return;
 
         let color = type === 'ERROR' || type === 'EMERGENCY' ? '#ff1030' : (type === 'POWER' || type === 'ENGINE' ? '#ff007f' : '#00f2ff');
@@ -55,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     initTable();
 
-// --- ARRANQUE INMEDIATO DEL POLLING (Sin bloqueos) ---
+    // --- ARRANQUE INMEDIATO DEL POLLING ---
     setTimeout(() => { 
         if (ui.loader) ui.loader.style.opacity = '0'; 
         setTimeout(() => { 
@@ -64,9 +65,9 @@ document.addEventListener('DOMContentLoaded', () => {
             logToConsole("System Initialized and ready.", "INFO"); 
             startTelemetryPolling(); 
         }, 800); 
-    }, 1500); // 1.5 segundos de carga fija y se abre el panel
+    }, 1500); 
 
-    // --- GESTIÓN DE PERMISOS VISUALES (Sin spam en la consola) ---
+    // --- GESTIÓN DE PERMISOS VISUALES ---
     let lastPermissionStatus = null;
     function updatePermissionBadge(isMaster) {
         if (lastPermissionStatus === isMaster) return;
@@ -89,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- BOTONES: Solo mandan peticiones, no manipulan el UI directo ---
+    // --- BOTONES ---
     window.togglePower = async () => {
         let desiredState = !isPwrOn;
         try { 
@@ -120,44 +121,83 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch(e){}
     };
 
-    // --- DIALES INTELIGENTES ---
+    // --- DIALES INTELIGENTES (Con Soporte para 3 Decimales y Alta Velocidad) ---
     function setupMotor(id) {
         const dial = document.getElementById(`dial${id === 'A' ? 'X' : 'Y'}Container`).firstElementChild;
         const needle = dial.querySelector('.dial-needle-container');
         const readout = document.getElementById(`val${id}-center`);
         const bgRotator = document.getElementById(`bgRotator${id}`);
+        const manualInput = document.getElementById(`manualRpm${id}`);
         let tAxis, isDragging = false, currentRPM = 0.0;
 
-        setInterval(() => { bgRotator.style.animationDuration = (isPwrOn && isRunOn && currentRPM > 0) ? `${20/currentRPM}s` : '0s'; }, 100);
+        // Limita la velocidad de rotación visual de la interfaz para que no parpadee si va a 5000 RPM
+        setInterval(() => { 
+            let visualRpm = currentRPM > 100 ? 100 : currentRPM; 
+            bgRotator.style.animationDuration = (isPwrOn && isRunOn && visualRpm > 0) ? `${20/visualRpm}s` : '0s'; 
+        }, 100);
 
         const updateDialUI = (rpm, sendToServer = true) => {
-            currentRPM = rpm; 
-            readout.innerText = currentRPM.toFixed(1); 
+            currentRPM = parseFloat(rpm); 
+            
+            // Limitamos a 1 decimal visual en el centro del dial interactivo por espacio
+            readout.innerText = currentRPM > 999 ? currentRPM.toFixed(0) : currentRPM.toFixed(1); 
+            
+            if (manualInput && document.activeElement !== manualInput) {
+                manualInput.value = currentRPM.toFixed(3);
+            }
+            
             needle.style.transform = `rotate(${(currentRPM/10)*360}deg)`;
             
             if (sendToServer) {
                 clearTimeout(tAxis); 
                 tAxis = setTimeout(async () => {
                     try {
-                        const res = await fetch(`/control/${id}/${currentRPM.toFixed(1)}`, { method: 'POST' });
+                        const res = await fetch(`/control/${id}/${currentRPM.toFixed(3)}`, { method: 'POST' });
                         const data = await res.json();
-                        if (data.status === "DENIED") updateDialUI(0, false); // Efecto resorte si es observador
+                        if (data.status === "DENIED") updateDialUI(0, false); 
                     } catch(e){}
                 }, 250);
             }
         };
 
+        // Lógica de Entrada Manual - Ahora soporta hasta 5000 RPM
+        if (manualInput) {
+            manualInput.addEventListener('change', (e) => {
+                let val = parseFloat(e.target.value);
+                if (isNaN(val)) val = 0.0;
+                if (val < 0) val = 0.0;
+                if (val > 5000) val = 5000.0; // Límite industrial elevado
+                
+                e.target.value = val.toFixed(3);
+                updateDialUI(val, true); 
+            });
+            
+            manualInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') manualInput.blur();
+            });
+        }
+
+        // Lógica de arrastre de la aguja
         const onMove = (e) => {
             if (!isDragging) return; e.preventDefault();
             const rect = dial.getBoundingClientRect(), cx = rect.left + rect.width/2, cy = rect.top + rect.height/2;
             let theta = Math.atan2((e.touches?e.touches[0].clientY:e.clientY)-cy, (e.touches?e.touches[0].clientX:e.clientX)-cx)*180/Math.PI + 90;
             if (theta < 0) theta += 360;
             
-            let newRPM = (theta / 360) * 10;
-            if (currentRPM > 8.0 && newRPM < 2.0) newRPM = 10.0;
-            else if (currentRPM < 2.0 && newRPM > 8.0) newRPM = 0.0;
-            if (newRPM >= 9.8) newRPM = 10.0;
-            if (newRPM <= 0.2) newRPM = 0.0;
+            // Calculamos el arrastre. Si el usuario ya metió un número alto (ej. 1500), 
+            // el dial afectará solamente la franja de los últimos 10 RPM.
+            let fractionalRpm = (theta / 360) * 10;
+            let baseRpm = Math.floor(currentRPM / 10) * 10;
+            
+            // Control de desbordamiento circular 
+            let prevFractional = currentRPM % 10;
+            if (prevFractional > 8.0 && fractionalRpm < 2.0) fractionalRpm = 10.0;
+            else if (prevFractional < 2.0 && fractionalRpm > 8.0) fractionalRpm = 0.0;
+            if (fractionalRpm >= 9.8) fractionalRpm = 10.0;
+            if (fractionalRpm <= 0.2) fractionalRpm = 0.0;
+
+            let newRPM = baseRpm + fractionalRpm;
+            if (newRPM > 5000) newRPM = 5000.0;
 
             updateDialUI(newRPM, true);
         };
@@ -170,7 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     setupMotor('A'); setupMotor('B');
 
-    // --- CEREBRO DE SINCRONIZACIÓN (El Servidor Manda) ---
+    // --- CEREBRO DE SINCRONIZACIÓN ---
     function startTelemetryPolling() {
         telemetryInterval = setInterval(async () => {
             try {
@@ -184,7 +224,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     liveChart.update();
                     updateTable(d.v90, d.s210);
                     
-                    // Sincronizar botones de Poder y Arranque con el estado REAL del PLC
                     isPwrOn = d.v90.Activar;
                     isRunOn = d.v90.Arrancar;
 
@@ -202,7 +241,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         btnStr.innerText = isRunOn ? "ENGINE: RUNNING" : "START ENGINE";
                     }
                     
-                    // Actualizar el cartel de permisos basado en lo que dice Python
                     if (d.is_master !== undefined) updatePermissionBadge(d.is_master);
                 }
             } catch (e) {}
@@ -214,5 +252,13 @@ document.addEventListener('DOMContentLoaded', () => {
             await fetch('/emergency', { method: 'POST' }); 
         } catch(e){}
         logToConsole("EMERGENCY COMMAND SENT.", "EMERGENCY"); 
+        
+        // Reset local visual para las cajas manuales adicionales
+        document.getElementById('manualRpmA').value = "0.000";
+        document.getElementById('manualRpmB').value = "0.000";
+        document.getElementById('torqueA').value = "0.0";
+        document.getElementById('torqueB').value = "0.0";
+        document.getElementById('mvA').value = "0.0";
+        document.getElementById('mvB').value = "0.0";
     };
 });

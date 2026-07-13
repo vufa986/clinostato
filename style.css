@@ -98,7 +98,7 @@ body {
 .btn-panic { width: calc(100% - 80px); margin: 0 40px 15px 40px; padding: 10px; background: transparent; border: 2px solid var(--neon-red); color: var(--neon-red); font-weight: 800; cursor: pointer; font-family: 'Rajdhani'; transition: 0.3s; box-sizing: border-box; }
 .btn-panic:hover { background: var(--neon-red); color: white; box-shadow: 0 0 15px var(--neon-red); }
 
-.motor-control-layout { display: flex; align-items: center; gap: 30px; margin-top: 10px; width: 100%; box-sizing: border-box;}
+.motor-control-layout { display: flex; align-items: flex-start; gap: 30px; margin-top: 10px; width: 100%; box-sizing: border-box;}
 .circular-dial-container { width: 250px; height: 250px; position: relative; display: flex; justify-content: center; align-items: center; flex-shrink: 0;}
 .dial-interactivo { width: 100%; height: 100%; border-radius: 50%; position: relative; overflow: hidden; cursor: grab; }
 .dial-interactivo img { -webkit-user-drag: none; user-select: none; pointer-events: none; }
@@ -123,16 +123,34 @@ body {
 .rpm-number { font-size: 2.5rem; font-weight: 700; color: #fff; line-height: 1; text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 0 10px rgba(0,0,0,1); }
 .rpm-text { font-size: 0.8rem; color: var(--neon-cyan); font-weight: 700; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; }
 
+/* NUEVO: ESTILOS DE LA CASILLA MANUAL DE 3 DECIMALES (Centrado Perfecto) */
+.manual-rpm-container { 
+    display: flex; align-items: center; justify-content: center; gap: 8px; 
+    background: rgba(0, 0, 0, 0.6); padding: 5px 10px; 
+    border: 1px solid rgba(0, 242, 255, 0.4); border-radius: 4px; 
+    box-shadow: inset 0 0 10px rgba(0, 242, 255, 0.1); 
+    width: 140px; /* Ancho fijo para evitar desbordes */
+    margin: 5px auto 0 auto; /* Margin AUTO para centrado horizontal estricto */
+    box-sizing: border-box; 
+}
+.manual-rpm-container input { 
+    background: transparent; border: none; color: #fff; 
+    font-size: 1.1rem; font-family: monospace; font-weight: bold; 
+    width: 70px; text-align: center; outline: none;     
+}
+.manual-rpm-container input:focus { color: var(--neon-cyan); }
+.manual-rpm-container span { color: var(--neon-cyan); font-size: 0.8rem; font-weight: bold; }
+
 .title-white { color: #ffffff !important; font-weight: bold; font-size: 1.1rem; text-shadow: 0 0 5px rgba(255,255,255,0.5); }
 .title-white small { color: rgba(255,255,255,0.7) !important; font-size: 0.75rem; margin-left: 10px; }
 .label-white { color: #ffffff !important; text-shadow: 0 0 4px rgba(255,255,255,0.4); font-size: 0.7rem !important; }
 .text-white { color: #ffffff !important; text-shadow: 0 0 4px rgba(255,255,255,0.4); font-weight: 600; }
 
-.motor-settings-side { flex: 1; width: 100%; box-sizing: border-box; }
+.motor-settings-side { flex: 1; width: 100%; box-sizing: border-box; margin-top: 15px; }
 .extra-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; }
 .control-group { display: flex; flex-direction: column; justify-content: flex-start; }
 .control-group label { font-size: 0.65rem; text-transform: uppercase; font-weight: bold; min-height: 2.5em; display: flex; align-items: flex-end; padding-bottom: 5px; line-height: 1.1; }
-input[type=number], select { background: rgba(0,0,0,0.4); border: none; border-bottom: 1px solid var(--neon-cyan); color: var(--neon-cyan); padding: 6px; font-family: 'Rajdhani'; outline: none; width: 100%; box-sizing: border-box; }
+input[type=number]:not(#manualRpmA):not(#manualRpmB), select { background: rgba(0,0,0,0.4); border: none; border-bottom: 1px solid var(--neon-cyan); color: var(--neon-cyan); padding: 6px; font-family: 'Rajdhani'; outline: none; width: 100%; box-sizing: border-box; }
 
 .hud-separator { border: 0; border-top: 1px dashed rgba(255,255,255,0.1); margin: 15px 0; }
 
@@ -185,7 +203,6 @@ input[type=number], select { background: rgba(0,0,0,0.4); border: none; border-b
         overflow-x: hidden; 
     }
 
-    /* 1. Contenedor principal cambia a Flexbox en 1 sola columna centrada */
     .dashboard-grid {
         display: flex;
         flex-direction: column;
@@ -196,17 +213,15 @@ input[type=number], select { background: rgba(0,0,0,0.4); border: none; border-b
         width: 100%;
     }
 
-    /* 2. Los paneles ocupan el espacio pero no se estiran de más */
     .hud-panel {
         width: 100%;
-        max-width: 800px; /* Mantiene un ancho agradable en tablets */
+        max-width: 800px;
         display: flex;
         flex-direction: column;
-        align-items: center; /* Centra el contenido interior */
+        align-items: center; 
         box-sizing: border-box;
     }
 
-    /* 3. Encabezado en columna y centrado */
     .top-header { 
         display: flex;
         flex-direction: column; 
@@ -218,7 +233,6 @@ input[type=number], select { background: rgba(0,0,0,0.4); border: none; border-b
     }
     .header-logo { height: 45px; }
 
-    /* 4. El botón de pánico se ajusta al centro */
     .btn-panic { 
         width: 90%; 
         max-width: 800px; 
@@ -226,7 +240,6 @@ input[type=number], select { background: rgba(0,0,0,0.4); border: none; border-b
         display: block; 
     }
 
-    /* 5. Consola maestra (Botones Power/Start) apilada */
     .master-console {
         display: flex;
         flex-direction: column;
@@ -236,7 +249,6 @@ input[type=number], select { background: rgba(0,0,0,0.4); border: none; border-b
     }
     .master-console button { width: 100%; max-width: 400px; }
 
-    /* 6. Motores: Título, Dial y Ajustes todo en 1 columna centrada */
     .motor-unit {
         display: flex;
         flex-direction: column;
@@ -260,6 +272,7 @@ input[type=number], select { background: rgba(0,0,0,0.4); border: none; border-b
         flex-direction: column;
         align-items: center;
         width: 100%;
+        margin-top: 0;
     }
     
     .extra-controls {
@@ -271,7 +284,6 @@ input[type=number], select { background: rgba(0,0,0,0.4); border: none; border-b
         max-width: 400px;
     }
 
-    /* 7. Monitor Panel también centrado en columna */
     .chart-area { width: 100%; max-width: 600px; }
     
     .dashboard-table-container { 
@@ -302,13 +314,10 @@ input[type=number], select { background: rgba(0,0,0,0.4); border: none; border-b
     }
 }
 
-/* ==========================================================
-   CELULARES MUY ESTRECHOS (< 600px)
-   ========================================================== */
 @media (max-width: 600px) {
     .circular-dial-container { width: 160px; height: 160px; }
     .rpm-number { font-size: 1.8rem; }
     
     .hud-panel { padding: 15px; }
-    .card-tag { left: 15px; } /* Ajuste de la etiqueta para que no se salga */
+    .card-tag { left: 15px; } 
 }

@@ -48,16 +48,24 @@
             <div class="motor-unit">
                 <div class="motor-info"><label class="title-white">AXIS X <small>Primary Rotation</small></label></div>
                 <div class="motor-control-layout">
-                    <div class="circular-dial-container" id="dialXContainer">
-                        <div class="dial-interactivo" id="dialA">
-                            <div class="dial-background-rotator" id="bgRotatorA"><img src="img/dial_fondo.png" class="dial-background"></div>
-                            <div class="dial-needle-container"><img src="img/puntero_aguja.png" class="dial-needle-img"></div>
-                            <div class="dial-center-overlay-data">
-                                <div class="rpm-number" id="valA-center">0.0</div>
-                                <div class="rpm-text">RPM</div>
+                    <!-- Contenedor Izquierdo: Dial + Input Manual -->
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                        <div class="circular-dial-container" id="dialXContainer">
+                            <div class="dial-interactivo" id="dialA">
+                                <div class="dial-background-rotator" id="bgRotatorA"><img src="img/dial_fondo.png" class="dial-background"></div>
+                                <div class="dial-needle-container"><img src="img/puntero_aguja.png" class="dial-needle-img"></div>
+                                <div class="dial-center-overlay-data">
+                                    <div class="rpm-number" id="valA-center">0.0</div>
+                                    <div class="rpm-text">RPM</div>
+                                </div>
                             </div>
                         </div>
+                        <div class="manual-rpm-container">
+                            <input type="number" id="manualRpmA" step="0.001" min="0" max="50" placeholder="0.000">
+                            <span>RPM</span>
+                        </div>
                     </div>
+                    
                     <div class="motor-settings-side">
                         <div class="extra-controls">
                             <div class="control-group">
@@ -86,16 +94,24 @@
             <div class="motor-unit">
                 <div class="motor-info"><label class="title-white">AXIS Y <small>Secondary Rotation</small></label></div>
                 <div class="motor-control-layout">
-                    <div class="circular-dial-container" id="dialYContainer">
-                        <div class="dial-interactivo" id="dialB">
-                            <div class="dial-background-rotator" id="bgRotatorB"><img src="img/dial_fondo.png" class="dial-background"></div>
-                            <div class="dial-needle-container"><img src="img/puntero_aguja.png" class="dial-needle-img"></div>
-                            <div class="dial-center-overlay-data">
-                                <div class="rpm-number" id="valB-center">0.0</div>
-                                <div class="rpm-text">RPM</div>
+                    <!-- Contenedor Izquierdo: Dial + Input Manual -->
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                        <div class="circular-dial-container" id="dialYContainer">
+                            <div class="dial-interactivo" id="dialB">
+                                <div class="dial-background-rotator" id="bgRotatorB"><img src="img/dial_fondo.png" class="dial-background"></div>
+                                <div class="dial-needle-container"><img src="img/puntero_aguja.png" class="dial-needle-img"></div>
+                                <div class="dial-center-overlay-data">
+                                    <div class="rpm-number" id="valB-center">0.0</div>
+                                    <div class="rpm-text">RPM</div>
+                                </div>
                             </div>
                         </div>
+                        <div class="manual-rpm-container">
+                            <input type="number" id="manualRpmB" step="0.001" min="0" max="10" placeholder="0.000">
+                            <span>RPM</span>
+                        </div>
                     </div>
+
                     <div class="motor-settings-side">
                         <div class="extra-controls">
                             <div class="control-group">
