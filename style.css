@@ -13,10 +13,11 @@
 
 body { 
     background: var(--bg); color: var(--text); font-family: 'Rajdhani', sans-serif; 
-    margin: 0; overflow-x: hidden; overflow-y: hidden; 
+    margin: 0; overflow-x: hidden; overflow-y: auto; 
     background-image: linear-gradient(rgba(0, 242, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 242, 255, 0.03) 1px, transparent 1px);
     background-size: 30px 30px;
     user-select: none; 
+    padding-bottom: 40px; /* Espacio extra al final para mejor scroll */
 }
 
 .wallpaper-tunnnel {
@@ -32,7 +33,6 @@ body {
     position: fixed; inset: 0; background: var(--bg); z-index: 10000; display: flex; flex-direction: column; justify-content: center; align-items: center; 
 }
 
-/* BORDE BLANCO ULTRAFINO (0.2px) EN EL LOGO DE CARGA + LUZ NEON */
 .loader-logo { 
     width: 200px; 
     animation: logoGrow 3s ease-in-out forwards, pulseGlow 2s infinite alternate; 
@@ -51,15 +51,17 @@ body {
     font-size: 1rem; font-weight: 700; letter-spacing: 4px; margin-top: 15px; color: var(--neon-cyan); text-shadow: 0 0 10px var(--neon-cyan);
 }
 
-.top-header { display: flex; justify-content: space-between; padding: 15px 50px; align-items: center; }
+.top-header { display: flex; justify-content: space-between; padding: 15px 40px; align-items: center; }
 
-/* BORDE BLANCO ULTRAFINO (0.2px) EN EL LOGO PEQUEÑO DE LA ESQUINA */
 .header-logo { 
     height: 50px; 
     filter: drop-shadow(0.2px 0.2px 0px #ffffff) drop-shadow(-0.2px -0.2px 0px #ffffff) drop-shadow(0.2px -0.2px 0px #ffffff) drop-shadow(-0.2px 0.2px 0px #ffffff);
 }
 
 .brand p { font-size: 0.8rem; color: var(--neon-cyan); letter-spacing: 2px; font-weight: bold; margin: 0; }
+
+.header-status-group { display: flex; align-items: center; gap: 20px; }
+.uptime-badge { font-family: monospace; font-size: 0.9rem; color: #eab308; background: rgba(234, 179, 8, 0.1); padding: 5px 15px; border: 1px solid #eab308; border-radius: 4px; font-weight: bold; }
 
 .live-indicator { font-weight: bold; display: flex; align-items: center; gap: 10px; transition: color 0.3s ease, text-shadow 0.3s ease; }
 .status-off { color: var(--neon-red) !important; text-shadow: 0 0 8px rgba(255, 16, 48, 0.6); }
@@ -69,11 +71,51 @@ body {
 .pulse-dot { width: 8px; height: 8px; border-radius: 50%; animation: blink 1s infinite; box-shadow: 0 0 6px currentColor; }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
+/* --- REDISEÑO DEL BOTÓN DE EMERGENCIA --- */
+.btn-panic { 
+    width: calc(100% - 80px); margin: 0 40px 15px 40px; padding: 15px; 
+    background: repeating-linear-gradient(45deg, #a00010, #a00010 15px, #ff1030 15px, #ff1030 30px);
+    border: 2px solid #fff; color: #fff; font-weight: 900; font-size: 1.2rem; letter-spacing: 2px;
+    text-shadow: 2px 2px 4px #000; box-shadow: 0 0 20px rgba(255,16,48,0.6); cursor: pointer; 
+    animation: panicPulse 2s infinite; border-radius: 8px; font-family: 'Rajdhani', sans-serif;
+    transition: 0.2s ease-in-out;
+}
+@keyframes panicPulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(255,16,48,0.6); transform: scale(1); }
+    50% { box-shadow: 0 0 40px rgba(255,16,48,1); transform: scale(1.01); }
+}
+.btn-panic:hover { animation: none; transform: scale(1.02); filter: brightness(1.2); }
+.btn-panic:active { transform: scale(0.98); }
+
+/* --- PANEL DE AUTOMATIZACIÓN DESPLEGABLE --- */
+.automation-container { margin: 0 40px 15px 40px; border: 1px solid var(--neon-cyan); border-radius: 8px; background: var(--hud-bg); backdrop-filter: blur(5px); }
+.automation-header { padding: 10px 20px; background: rgba(0, 242, 255, 0.1); color: var(--neon-cyan); font-weight: bold; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-radius: 8px; transition: 0.3s; }
+.automation-header:hover { background: rgba(0, 242, 255, 0.2); }
+.automation-body { display: none; padding: 20px; border-top: 1px solid rgba(0, 242, 255, 0.2); }
+.automation-body.show { display: block; animation: slideDown 0.3s ease-out; }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+.auto-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+.auto-card { background: rgba(0,0,0,0.5); padding: 15px; border: 1px solid #333; border-radius: 6px; }
+.auto-card-title { color: #fff; font-weight: bold; margin-bottom: 15px; font-size: 1rem; border-bottom: 1px dashed #444; padding-bottom: 5px;}
+.auto-inputs { display: flex; gap: 10px; margin-bottom: 10px; }
+.auto-inputs input, .auto-inputs-multi input { flex: 1; background: #111; border: 1px solid var(--neon-cyan); color: #00f2ff; padding: 8px; border-radius: 4px; font-family: monospace; outline: none; text-align: center; }
+.auto-inputs button, .auto-card button { background: rgba(0, 242, 255, 0.1); border: 1px solid var(--neon-cyan); color: var(--neon-cyan); padding: 8px 15px; cursor: pointer; font-weight: bold; border-radius: 4px; transition: 0.3s; font-family: 'Rajdhani', sans-serif;}
+.auto-inputs button:hover, .auto-card button:hover { background: var(--neon-cyan); color: #000; }
+.auto-inputs-multi { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
+.auto-inputs-multi div { display: flex; align-items: center; gap: 10px; }
+.auto-inputs-multi label { width: 50px; color: #aaa; font-size: 0.8rem; font-weight: bold; }
+.auto-status { margin-top: 10px; font-family: monospace; font-size: 0.9rem; color: #eab308; }
+.mt-2 { margin-top: 10px; width: 100%; }
+
+.motor-run-time { font-family: monospace; color: #10b981; font-size: 0.85rem; margin-top: 2px; font-weight: bold; text-shadow: 0 0 5px rgba(16, 185, 129, 0.5); }
+
+/* --- CONTENIDO PRINCIPAL --- */
 .dashboard-grid { 
     display: grid; 
     grid-template-columns: 1.2fr 0.8fr; 
     gap: 20px; 
-    padding: 0 40px; 
+    padding: 0 40px 40px 40px; 
     box-sizing: border-box; 
     max-width: 100vw;
 }
@@ -95,12 +137,10 @@ body {
 .pwr-on { background: var(--neon-magenta) !important; color: white !important; box-shadow: 0 0 15px var(--neon-magenta); border-color: var(--neon-magenta) !important; }
 .str-on { background: var(--neon-cyan) !important; color: #000 !important; box-shadow: 0 0 15px var(--neon-cyan); }
 
-.btn-panic { width: calc(100% - 80px); margin: 0 40px 15px 40px; padding: 10px; background: transparent; border: 2px solid var(--neon-red); color: var(--neon-red); font-weight: 800; cursor: pointer; font-family: 'Rajdhani'; transition: 0.3s; box-sizing: border-box; }
-.btn-panic:hover { background: var(--neon-red); color: white; box-shadow: 0 0 15px var(--neon-red); }
-
-.motor-control-layout { display: flex; align-items: flex-start; gap: 30px; margin-top: 10px; width: 100%; box-sizing: border-box;}
+.motor-control-layout { display: flex; align-items: center; gap: 30px; margin-top: 10px; width: 100%; box-sizing: border-box;}
 .circular-dial-container { width: 250px; height: 250px; position: relative; display: flex; justify-content: center; align-items: center; flex-shrink: 0;}
 .dial-interactivo { width: 100%; height: 100%; border-radius: 50%; position: relative; overflow: hidden; cursor: grab; }
+.dial-interactivo:active { cursor: grabbing; }
 .dial-interactivo img { -webkit-user-drag: none; user-select: none; pointer-events: none; }
 
 .dial-background-rotator { position: absolute; inset: 0; width: 100%; height: 100%; animation: rotateBg linear infinite; animation-duration: 0s; }
@@ -123,20 +163,17 @@ body {
 .rpm-number { font-size: 2.5rem; font-weight: 700; color: #fff; line-height: 1; text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 0 10px rgba(0,0,0,1); }
 .rpm-text { font-size: 0.8rem; color: var(--neon-cyan); font-weight: 700; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; }
 
-/* NUEVO: ESTILOS DE LA CASILLA MANUAL DE 3 DECIMALES (Centrado Perfecto) */
 .manual-rpm-container { 
     display: flex; align-items: center; justify-content: center; gap: 8px; 
     background: rgba(0, 0, 0, 0.6); padding: 5px 10px; 
     border: 1px solid rgba(0, 242, 255, 0.4); border-radius: 4px; 
     box-shadow: inset 0 0 10px rgba(0, 242, 255, 0.1); 
-    width: 140px; /* Ancho fijo para evitar desbordes */
-    margin: 5px auto 0 auto; /* Margin AUTO para centrado horizontal estricto */
-    box-sizing: border-box; 
+    width: 140px; margin: 5px auto 0 auto; box-sizing: border-box; 
 }
 .manual-rpm-container input { 
     background: transparent; border: none; color: #fff; 
     font-size: 1.1rem; font-family: monospace; font-weight: bold; 
-    width: 70px; text-align: center; outline: none;     
+    width: 70px; text-align: center; outline: none; 
 }
 .manual-rpm-container input:focus { color: var(--neon-cyan); }
 .manual-rpm-container span { color: var(--neon-cyan); font-size: 0.8rem; font-weight: bold; }
@@ -146,19 +183,17 @@ body {
 .label-white { color: #ffffff !important; text-shadow: 0 0 4px rgba(255,255,255,0.4); font-size: 0.7rem !important; }
 .text-white { color: #ffffff !important; text-shadow: 0 0 4px rgba(255,255,255,0.4); font-weight: 600; }
 
-.motor-settings-side { flex: 1; width: 100%; box-sizing: border-box; margin-top: 15px; }
+.motor-settings-side { flex: 1; width: 100%; box-sizing: border-box; }
 .extra-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; }
 .control-group { display: flex; flex-direction: column; justify-content: flex-start; }
 .control-group label { font-size: 0.65rem; text-transform: uppercase; font-weight: bold; min-height: 2.5em; display: flex; align-items: flex-end; padding-bottom: 5px; line-height: 1.1; }
-input[type=number]:not(#manualRpmA):not(#manualRpmB), select { background: rgba(0,0,0,0.4); border: none; border-bottom: 1px solid var(--neon-cyan); color: var(--neon-cyan); padding: 6px; font-family: 'Rajdhani'; outline: none; width: 100%; box-sizing: border-box; }
+input[type=number]:not(#manualRpmA):not(#manualRpmB):not(#autoOffMins):not(#axA_rpm1):not(#axA_sec1):not(#axA_rpm2):not(#axA_sec2):not(#axB_rpm1):not(#axB_sec1):not(#axB_rpm2):not(#axB_sec2), select { 
+    background: rgba(0,0,0,0.4); border: none; border-bottom: 1px solid var(--neon-cyan); color: var(--neon-cyan); padding: 6px; font-family: 'Rajdhani'; outline: none; width: 100%; box-sizing: border-box; 
+}
 
 .hud-separator { border: 0; border-top: 1px dashed rgba(255,255,255,0.1); margin: 15px 0; }
 
-/* PANEL DERECHO - AJUSTE PERFECTO Y DISTRIBUCIÓN AUTOMÁTICA */
-.monitor-panel {
-    display: flex; flex-direction: column; justify-content: space-between; height: 100%; box-sizing: border-box;
-}
-
+.monitor-panel { display: flex; flex-direction: column; justify-content: space-between; height: 100%; box-sizing: border-box; }
 .chart-area { height: 160px !important; margin-top: 20px; position: relative; width: 100%; }
 
 .dashboard-table-container { margin-top: 10px; max-height: 140px; overflow-y: auto; border: 1px solid var(--neon-cyan); background: rgba(0,0,0,0.6); }
@@ -192,132 +227,33 @@ input[type=number]:not(#manualRpmA):not(#manualRpmB), select { background: rgba(
 .btn-sensor-link { background: rgba(0, 242, 255, 0.1); border: 1px solid var(--neon-cyan); color: var(--neon-cyan); padding: 6px 15px; font-family: 'Rajdhani', sans-serif; font-size: 0.8rem; font-weight: bold; letter-spacing: 1px; cursor: pointer; border-radius: 4px; transition: 0.3s; text-transform: uppercase; box-shadow: inset 0 0 5px rgba(0, 242, 255, 0.2); }
 .btn-sensor-link:hover { background: var(--neon-cyan); color: #000; box-shadow: 0 0 15px var(--neon-cyan); }
 
-
-/* ==========================================================
-   MODO RESPONSIVE FLUIDO CON FLEXBOX (Tablets y Celulares)
-   ========================================================== */
-
 @media (max-width: 1150px) {
-    body { 
-        overflow-y: auto; 
-        overflow-x: hidden; 
-    }
-
-    .dashboard-grid {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 15px;
-        padding-bottom: 50px;
-        gap: 20px;
-        width: 100%;
-    }
-
-    .hud-panel {
-        width: 100%;
-        max-width: 800px;
-        display: flex;
-        flex-direction: column;
-        align-items: center; 
-        box-sizing: border-box;
-    }
-
-    .top-header { 
-        display: flex;
-        flex-direction: column; 
-        align-items: center;
-        justify-content: center;
-        padding: 15px 10px; 
-        gap: 10px; 
-        text-align: center; 
-    }
-    .header-logo { height: 45px; }
-
-    .btn-panic { 
-        width: 90%; 
-        max-width: 800px; 
-        margin: 0 auto 15px auto; 
-        display: block; 
-    }
-
-    .master-console {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        width: 100%;
-        gap: 15px;
-    }
+    .dashboard-grid { display: flex; flex-direction: column; align-items: center; padding: 15px; padding-bottom: 50px; gap: 20px; width: 100%; }
+    .hud-panel { width: 100%; max-width: 800px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; }
+    .top-header { flex-direction: column; text-align: center; gap: 15px; }
+    .header-status-group { flex-direction: column; gap: 10px; }
+    .automation-container { margin: 0 15px 15px 15px; }
+    .btn-panic { width: 90%; max-width: 800px; margin: 0 auto 15px auto; display: block; }
+    .master-console { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 15px; }
     .master-console button { width: 100%; max-width: 400px; }
-
-    .motor-unit {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        width: 100%;
-    }
-    
-    .motor-control-layout {
-        display: flex;
-        flex-direction: column;
-        align-items: center; 
-        gap: 20px;
-        width: 100%;
-    }
-    
+    .motor-unit { display: flex; flex-direction: column; align-items: center; width: 100%; }
+    .motor-control-layout { display: flex; flex-direction: column; align-items: center; gap: 20px; width: 100%; }
     .circular-dial-container { width: 200px; height: 200px; }
     .rpm-number { font-size: 2.2rem; }
-
-    .motor-settings-side {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        width: 100%;
-        margin-top: 0;
-    }
-    
-    .extra-controls {
-        display: flex;
-        flex-direction: column; /* Pasa de 2 columnas a 1 sola */
-        align-items: center;
-        gap: 15px;
-        width: 100%;
-        max-width: 400px;
-    }
-
+    .motor-settings-side { display: flex; flex-direction: column; align-items: center; width: 100%; }
+    .extra-controls { display: flex; flex-direction: column; align-items: center; gap: 15px; width: 100%; max-width: 400px; }
     .chart-area { width: 100%; max-width: 600px; }
-    
-    .dashboard-table-container { 
-        width: 100%; 
-        max-width: 600px; 
-        overflow-x: auto; 
-    }
+    .dashboard-table-container { width: 100%; max-width: 600px; overflow-x: auto; }
     .dashboard-table-container table { white-space: nowrap; font-size: 0.75rem; text-align: center; }
     .dashboard-table-container th, .dashboard-table-container td { text-align: center; }
-
-    .telemetry-readouts {
-        display: flex;
-        flex-direction: column; /* Valores finales RPM apilados */
-        align-items: center;
-        gap: 15px;
-        width: 100%;
-    }
-
+    .telemetry-readouts { display: flex; flex-direction: column; align-items: center; gap: 15px; width: 100%; }
     .system-console { width: 100%; max-width: 600px; }
-    
-    .footer-data { 
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 15px;
-        width: 100%;
-        text-align: center;
-    }
+    .footer-data { display: flex; flex-direction: column; align-items: center; gap: 15px; width: 100%; text-align: center; }
 }
 
 @media (max-width: 600px) {
     .circular-dial-container { width: 160px; height: 160px; }
     .rpm-number { font-size: 1.8rem; }
-    
     .hud-panel { padding: 15px; }
     .card-tag { left: 15px; } 
 }

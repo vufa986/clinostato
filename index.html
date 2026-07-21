@@ -26,14 +26,60 @@
             <p>Advanced Biometric Research System</p>
         </div>
         
-        <div id="control-badge" style="padding: 5px 15px; border: 1px solid var(--neon-cyan); color: var(--neon-cyan); font-weight: bold; font-size: 0.8rem; background: rgba(0, 242, 255, 0.1); border-radius: 4px; display: none;">
-            ✅ MODO MAESTRO
-        </div>
+        <div class="header-status-group">
+            <div id="sys-uptime" class="uptime-badge">⏱️ SYS UPTIME: 00:00:00</div>
+            
+            <div id="control-badge" style="padding: 5px 15px; border: 1px solid var(--neon-cyan); color: var(--neon-cyan); font-weight: bold; font-size: 0.8rem; background: rgba(0, 242, 255, 0.1); border-radius: 4px; display: none;">
+                ✅ MODO MAESTRO
+            </div>
 
-        <div id="live-telemetry" class="live-indicator status-off"><span class="pulse-dot"></span> LIVE TELEMETRY</div>
+            <div id="live-telemetry" class="live-indicator status-off"><span class="pulse-dot"></span> LIVE TELEMETRY</div>
+        </div>
     </header>
 
+    <!-- BOTÓN DE EMERGENCIA REDISEÑADO -->
     <button class="btn-panic" id="panicButton">⚠ SYSTEM EMERGENCY RESET: CLEAR ALL PARAMETERS ⚠</button>
+
+    <!-- NUEVO: PANEL DESPLEGABLE DE AUTOMATIZACIÓN -->
+    <div class="automation-container">
+        <div class="automation-header">
+            <span>⚙️ PROGRAMADOR DE RUTINAS Y CRONÓMETROS (AUTOMATIZACIÓN)</span>
+            <span style="font-size: 0.8rem;">▼</span>
+        </div>
+        <div class="automation-body" id="autoBody">
+            <div class="auto-grid">
+                <!-- Temporizador Global -->
+                <div class="auto-card">
+                    <div class="auto-card-title">🔌 Apagado Automático Global</div>
+                    <div class="auto-inputs">
+                        <input type="number" id="autoOffMins" placeholder="Mins para apagar">
+                        <button id="btnAutoOff" onclick="toggleAutoOff()">Iniciar</button>
+                    </div>
+                    <div class="auto-status" id="statusAutoOff">Inactivo</div>
+                </div>
+                <!-- Rutina AXIS X -->
+                <div class="auto-card">
+                    <div class="auto-card-title">🔄 Rutina Oscilante AXIS X (V90)</div>
+                    <div class="auto-inputs-multi">
+                        <div><label>Fase 1</label><input type="number" id="axA_rpm1" placeholder="RPM"><input type="number" id="axA_sec1" placeholder="Segs"></div>
+                        <div><label>Fase 2</label><input type="number" id="axA_rpm2" placeholder="RPM"><input type="number" id="axA_sec2" placeholder="Segs"></div>
+                    </div>
+                    <button id="btnAutoA" onclick="toggleRoutine('A')" class="mt-2">Activar Ciclo</button>
+                    <div class="auto-status" id="statusAutoA">Inactivo</div>
+                </div>
+                <!-- Rutina AXIS Y -->
+                <div class="auto-card">
+                    <div class="auto-card-title">🔄 Rutina Oscilante AXIS Y (S210)</div>
+                    <div class="auto-inputs-multi">
+                        <div><label>Fase 1</label><input type="number" id="axB_rpm1" placeholder="RPM"><input type="number" id="axB_sec1" placeholder="Segs"></div>
+                        <div><label>Fase 2</label><input type="number" id="axB_rpm2" placeholder="RPM"><input type="number" id="axB_sec2" placeholder="Segs"></div>
+                    </div>
+                    <button id="btnAutoB" onclick="toggleRoutine('B')" class="mt-2">Activar Ciclo</button>
+                    <div class="auto-status" id="statusAutoB">Inactivo</div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="dashboard-grid">
         <section class="hud-panel">
@@ -46,9 +92,11 @@
             </div>
 
             <div class="motor-unit">
-                <div class="motor-info"><label class="title-white">AXIS X <small>Primary Rotation</small></label></div>
+                <div class="motor-info">
+                    <label class="title-white">AXIS X <small>Primary Rotation</small></label>
+                    <div class="motor-run-time" id="timerA">⏱️ 00:00:00 en marcha</div>
+                </div>
                 <div class="motor-control-layout">
-                    <!-- Contenedor Izquierdo: Dial + Input Manual -->
                     <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
                         <div class="circular-dial-container" id="dialXContainer">
                             <div class="dial-interactivo" id="dialA">
@@ -61,7 +109,7 @@
                             </div>
                         </div>
                         <div class="manual-rpm-container">
-                            <input type="number" id="manualRpmA" step="0.001" min="0" max="50" placeholder="0.000">
+                            <input type="number" id="manualRpmA" step="0.001" min="0" max="5000" placeholder="0.000">
                             <span>RPM</span>
                         </div>
                     </div>
@@ -92,9 +140,11 @@
             <hr class="hud-separator">
 
             <div class="motor-unit">
-                <div class="motor-info"><label class="title-white">AXIS Y <small>Secondary Rotation</small></label></div>
+                <div class="motor-info">
+                    <label class="title-white">AXIS Y <small>Secondary Rotation</small></label>
+                    <div class="motor-run-time" id="timerB">⏱️ 00:00:00 en marcha</div>
+                </div>
                 <div class="motor-control-layout">
-                    <!-- Contenedor Izquierdo: Dial + Input Manual -->
                     <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
                         <div class="circular-dial-container" id="dialYContainer">
                             <div class="dial-interactivo" id="dialB">
@@ -107,7 +157,7 @@
                             </div>
                         </div>
                         <div class="manual-rpm-container">
-                            <input type="number" id="manualRpmB" step="0.001" min="0" max="10" placeholder="0.000">
+                            <input type="number" id="manualRpmB" step="0.001" min="0" max="5000" placeholder="0.000">
                             <span>RPM</span>
                         </div>
                     </div>

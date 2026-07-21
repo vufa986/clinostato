@@ -10,8 +10,11 @@ const CONFIG = {
     SUMMARY_SAMPLES: 20,
     SPHERE_RADIUS: 1.2,
     SENSOR_SIZE: { w: 0.4, l: 0.6, h: 0.15 },
-    MIN_G_VALUE: 0.000001 // Umbral extremadamente bajo para que siempre se agreguen puntos
+    MIN_G_VALUE: 0.000001
 };
+
+// Memoria global para el cálculo ISO 10816 (Velocidad RMS en Ventana Móvil)
+let rollingVelHistory = [];
 
 // ==================== UTILIDADES ====================
 const updateText = (id, val, suffix = '') => {
@@ -65,7 +68,6 @@ class SphereRenderer {
         this.MAX_POINTS = 150; 
         this.initSphereMesh();
         this.initPlotly();
-        // Semilla para que el buffer nunca esté vacío
         this.trajX.push(0); this.trajY.push(0); this.trajZ.push(-1);
     }
 
@@ -95,14 +97,14 @@ class SphereRenderer {
             x: [], y: [], z: [],
             line: { color: '#eab308', width: 3 },
             name: 'Estela G',
-            hoverinfo: 'skip' // <- Oculta los molestos tooltips
+            hoverinfo: 'skip' 
         };
         
         this.currentGTrace = {
             type: 'scatter3d', mode: 'markers', x: [0], y: [0], z: [-1],
             marker: { size: 6, color: '#00ff95', symbol: 'diamond' },
             name: 'G Actual',
-            hoverinfo: 'skip' // <- Oculta los molestos tooltips
+            hoverinfo: 'skip' 
         };
     }
     
@@ -118,7 +120,7 @@ class SphereRenderer {
             showlegend: false
         };
         if (document.getElementById('plotlySphere') && typeof Plotly !== 'undefined') {
-            Plotly.newPlot('plotlySphere', [this.sphereTrace, this.trajectoryTrace, this.currentGTrace], layout, { responsive: true });
+            Plotly.newPlot('plotlySphere', [this.sphereTrace, this.trajectoryTrace, this.currentGTrace], layout, { responsive: true, displayModeBar: false });
         }
     }
 
@@ -139,7 +141,6 @@ class SphereRenderer {
     updatePlotly(gx, gy, gz) {
         if (!document.getElementById('tab-tasmg')?.classList.contains('active') || typeof Plotly === 'undefined') return;
 
-        // Escudo anti-lag: No inyecta datos al 3D si lo estás rotando con el ratón
         if (!isInteracting3D) {
             Plotly.restyle('plotlySphere', {
                 x: [[...this.trajX, gx], [gx]],
@@ -153,7 +154,6 @@ class SphereRenderer {
 
     update2DMap(gx, gy) {
         const p2D = document.getElementById('plotly2D');
-        // Protección 1: No hacer nada si la pestaña está oculta
         if (!p2D || p2D.clientWidth <= 0) return;
 
         if (!this.isPlotly2DInitialized) {
@@ -175,43 +175,18 @@ class SphereRenderer {
             this.isPlotly2DInitialized = true;
             
         } else if (p2D.data) {
-            // Protección 2: Solo actualiza si Plotly ya terminó de armar el objeto interno
             Plotly.restyle(p2D, {
                 x: [[...this.trajX, gx], [0, gx], [gx]],
                 y: [[...this.trajY, gy], [0, gy], [gy]]
             }, [0, 1, 2]);
         }
     }
-
-    init2DMap(container, gx, gy) {
-        this.update2DMap(gx, gy);
-    }
-
-    resetTrajectory() {
-        this.trajX = []; this.trajY = []; this.trajZ = [];
-        this.isPlotly2DInitialized = false;
-    }
 }
 
-// ==================== RENDERIZADO DE SENSOR 3D ====================
+// ==================== NUEVO: RENDERIZADO 3D (CYBER-AEROESPACIAL) ====================
 class Sensor3DRenderer {
     constructor() {
-        this.initGeometry();
         this.initPlotly();
-    }
-    
-    initGeometry() {
-        const { w, l, h } = CONFIG.SENSOR_SIZE;
-        this.vertices = [
-            [ w,  l, -h], [-w,  l, -h], [-w, -l, -h], [ w, -l, -h],
-            [ w,  l,  h], [-w,  l,  h], [-w, -l,  h], [ w, -l,  h]
-        ];
-        
-        this.meshIndices = {
-            i: [0,0,4,4,0,0,3,3,0,0,1,1],
-            j: [1,2,5,6,1,5,2,6,3,7,2,6],
-            k: [2,3,6,7,5,4,6,7,7,4,6,5]
-        };
     }
     
     rotatePt(vx, vy, vz, pitch, roll, yaw) {
@@ -229,54 +204,88 @@ class Sensor3DRenderer {
         
         return [x3, y3, z3];
     }
-    
-    getRotatedSensor(pitch, roll, yaw) {
+
+    getRotatedBlock(w, l, h, zOffset, pitch, roll, yaw) {
+        const verts = [
+            [ w,  l, -h + zOffset], [-w,  l, -h + zOffset], [-w, -l, -h + zOffset], [ w, -l, -h + zOffset],
+            [ w,  l,  h + zOffset], [-w,  l,  h + zOffset], [-w, -l,  h + zOffset], [ w, -l,  h + zOffset]
+        ];
         const px = [], py = [], pz = [];
-        for (const v of this.vertices) {
+        for (const v of verts) {
             const [nx, ny, nz] = this.rotatePt(v[0], v[1], v[2], pitch, roll, yaw);
             px.push(nx); py.push(ny); pz.push(nz);
         }
-        const [xx, xy, xz] = this.rotatePt(1.2, 0, 0, pitch, roll, yaw);
-        const [yx, yy, yz] = this.rotatePt(0, 1.2, 0, pitch, roll, yaw);
-        const [zx, zy, zz] = this.rotatePt(0, 0, 1.2, pitch, roll, yaw);
-        
-        return {
-            mesh: { x: px, y: py, z: pz },
-            axX: { x: [0, xx], y: [0, xy], z: [0, xz] },
-            axY: { x: [0, yx], y: [0, yy], z: [0, yz] },
-            axZ: { x: [0, zx], y: [0, zy], z: [0, zz] }
-        };
+        return { x: px, y: py, z: pz };
+    }
+
+    // Crea los anillos orbitales estáticos para dar contexto aeroespacial
+    createRing(axis, radius, color) {
+        const x=[], y=[], z=[];
+        for(let i=0; i<=50; i++) {
+            const t = (i/50) * 2 * Math.PI;
+            if(axis==='x') { x.push(0); y.push(radius*Math.cos(t)); z.push(radius*Math.sin(t)); }
+            if(axis==='y') { x.push(radius*Math.cos(t)); y.push(0); z.push(radius*Math.sin(t)); }
+            if(axis==='z') { x.push(radius*Math.cos(t)); y.push(radius*Math.sin(t)); z.push(0); }
+        }
+        return { type: 'scatter3d', mode: 'lines', x, y, z, line: {color, width: 2, dash: 'dot'}, hoverinfo: 'skip', showlegend: false };
     }
     
     initPlotly() {
-        this.traceMesh = {
-            type: 'mesh3d', i: this.meshIndices.i, j: this.meshIndices.j, k: this.meshIndices.k,
-            x: [], y: [], z: [], color: '#3f3f46', opacity: 0.85, name: 'Cuerpo'
+        // Suelo Grid Reflectante
+        this.traceFloor = {
+            type: 'mesh3d', x: [-2, 2, 2, -2], y: [-2, -2, 2, 2], z: [-1.5, -1.5, -1.5, -1.5],
+            i: [0, 0], j: [1, 2], k: [2, 3],
+            color: '#00f2ff', opacity: 0.05, hoverinfo: 'skip', showlegend: false
         };
-        this.traceX = { type: 'scatter3d', mode: 'lines', x: [], y: [], z: [],
-                       line: { color: '#ef4444', width: 6 }, name: '+X (Pitch)' };
-        this.traceY = { type: 'scatter3d', mode: 'lines', x: [], y: [], z: [],
-                       line: { color: '#10b981', width: 6 }, name: '+Y (Roll)' };
-        this.traceZ = { type: 'scatter3d', mode: 'lines', x: [], y: [], z: [],
-                       line: { color: '#3282f6', width: 6 }, name: '+Z (Yaw)' };
+
+        // Anillos Giroscópicos
+        this.ringX = this.createRing('x', 1.4, 'rgba(239, 68, 68, 0.3)');
+        this.ringY = this.createRing('y', 1.4, 'rgba(16, 185, 129, 0.3)');
+        this.ringZ = this.createRing('z', 1.4, 'rgba(50, 130, 246, 0.3)');
+
+        // Línea de Gravedad (Anclaje al suelo)
+        this.traceGrav = {
+            type: 'scatter3d', mode: 'lines', x: [0,0], y: [0,0], z: [0, -1.5],
+            line: { color: 'rgba(255, 255, 255, 0.2)', width: 1, dash: 'dash' }, hoverinfo: 'skip', showlegend: false
+        };
+
+        // Placa PCB Principal (Cristal Neón Convexo - Erradica el bug de texturas negras)
+        this.tracePCB = {
+            type: 'mesh3d', x: [], y: [], z: [], alphahull: 0,
+            color: '#00f2ff', opacity: 0.5, name: 'PCB',
+            lighting: { ambient: 0.7, diffuse: 0.9, specular: 2.0, roughness: 0.2 }, hoverinfo: 'skip'
+        };
+
+        // Microcontrolador Central (Oscuro Convexo)
+        this.traceChip = {
+            type: 'mesh3d', x: [], y: [], z: [], alphahull: 0,
+            color: '#18181b', opacity: 1.0, name: 'MCU',
+            lighting: { ambient: 0.5, diffuse: 0.8, specular: 1.0 }, hoverinfo: 'skip'
+        };
+
+        // Vectores Direccionales
+        this.traceX = { type: 'scatter3d', mode: 'lines', x: [], y: [], z: [], line: { color: '#ef4444', width: 6 }, name: '+X (Pitch)', hoverinfo: 'skip' };
+        this.traceY = { type: 'scatter3d', mode: 'lines', x: [], y: [], z: [], line: { color: '#10b981', width: 6 }, name: '+Y (Roll)', hoverinfo: 'skip' };
+        this.traceZ = { type: 'scatter3d', mode: 'lines', x: [], y: [], z: [], line: { color: '#3282f6', width: 6 }, name: '+Z (Yaw)', hoverinfo: 'skip' };
         
         const layout = {
-            uirevision: true,
-            margin: { l: 0, r: 0, b: 0, t: 0 },
-            paper_bgcolor: 'transparent',
+            uirevision: true, margin: { l: 0, r: 0, b: 0, t: 0 }, paper_bgcolor: 'transparent',
             scene: {
-                xaxis: { title: 'X', range: [-1.5, 1.5], showgrid: true, gridcolor: '#27272a', showbackground: false },
-                yaxis: { title: 'Y', range: [-1.5, 1.5], showgrid: true, gridcolor: '#27272a', showbackground: false },
-                zaxis: { title: 'Z', range: [-1.5, 1.5], showgrid: true, gridcolor: '#27272a', showbackground: false },
-                camera: { eye: { x: 1.5, y: 1.5, z: 1.2 } }
+                xaxis: { title: '', range: [-1.6, 1.6], showgrid: true, gridcolor: '#27272a', zerolinecolor: '#ef4444', showbackground: false, showticklabels: false },
+                yaxis: { title: '', range: [-1.6, 1.6], showgrid: true, gridcolor: '#27272a', zerolinecolor: '#10b981', showbackground: false, showticklabels: false },
+                zaxis: { title: '', range: [-1.6, 1.6], showgrid: true, gridcolor: '#27272a', zerolinecolor: '#3282f6', showbackground: false, showticklabels: false },
+                camera: { eye: { x: 1.5, y: 1.5, z: 0.8 } },
+                aspectmode: 'manual', aspectratio: { x: 1, y: 1, z: 1 }
             },
-            showlegend: true,
-            legend: { font: { color: 'white', size: 10 }, x: 0, y: 1, bgcolor: 'rgba(0,0,0,0.5)' }
+            showlegend: true, legend: { font: { color: 'white', size: 10 }, x: 0, y: 1, bgcolor: 'rgba(0,0,0,0.5)' }
         };
         
         const container = document.getElementById('plotlySensor');
         if (container && typeof Plotly !== 'undefined') {
-            Plotly.newPlot('plotlySensor', [this.traceMesh, this.traceX, this.traceY, this.traceZ], layout, { responsive: true });
+            Plotly.newPlot('plotlySensor', [
+                this.traceFloor, this.ringX, this.ringY, this.ringZ, this.traceGrav, // Estáticos (0 a 4)
+                this.tracePCB, this.traceChip, this.traceX, this.traceY, this.traceZ   // Dinámicos (5 a 9)
+            ], layout, { responsive: true, displayModeBar: false });
         }
     }
     
@@ -284,12 +293,20 @@ class Sensor3DRenderer {
         if (isInteracting3D) return;
         const tab3d = document.getElementById('tab-3d');
         if (!tab3d?.classList.contains('active') || typeof Plotly === 'undefined') return;
-        const rot = this.getRotatedSensor(angle.x, angle.y, angle.z);
+
+        // Extraemos los puntos matemáticos puros y dejamos que Plotly construya el sólido (alphahull: 0)
+        const pcb = this.getRotatedBlock(0.6, 0.4, 0.05, 0, angle.x, angle.y, angle.z);
+        const chip = this.getRotatedBlock(0.15, 0.15, 0.05, 0.1, angle.x, angle.y, angle.z);
+
+        const [xx, xy, xz] = this.rotatePt(1.4, 0, 0, angle.x, angle.y, angle.z);
+        const [yx, yy, yz] = this.rotatePt(0, 1.4, 0, angle.x, angle.y, angle.z);
+        const [zx, zy, zz] = this.rotatePt(0, 0, 1.4, angle.x, angle.y, angle.z);
+
         Plotly.restyle('plotlySensor', {
-            x: [rot.mesh.x, rot.axX.x, rot.axY.x, rot.axZ.x],
-            y: [rot.mesh.y, rot.axX.y, rot.axY.y, rot.axZ.y],
-            z: [rot.mesh.z, rot.axX.z, rot.axY.z, rot.axZ.z]
-        }, [0, 1, 2, 3]);
+            x: [pcb.x, chip.x, [0, xx], [0, yx], [0, zx]],
+            y: [pcb.y, chip.y, [0, xy], [0, yy], [0, zy]],
+            z: [pcb.z, chip.z, [0, xz], [0, yz], [0, zz]]
+        }, [5, 6, 7, 8, 9]); 
     }
 }
 
@@ -511,6 +528,36 @@ function renderUI(d) {
     
     peakManager.update(angle, vel);
     if (oscilloscope) oscilloscope.update(vel.x, vel.y, vel.z);
+
+    // --- LÓGICA DE ESTADO ISO 10816 (VIBRACIÓN) SUPER-REACTIVA ---
+    const currentInstVel = Math.sqrt(vel.x**2 + vel.y**2 + vel.z**2);
+    rollingVelHistory.push(currentInstVel);
+    
+    // Búfer reducido a 15 muestras para que reaccione muchísimo más rápido a tus sacudidas
+    if (rollingVelHistory.length > 15) {
+        rollingVelHistory.shift();
+    }
+
+    const sumOfSquares = rollingVelHistory.reduce((sum, v) => sum + (v ** 2), 0);
+    const windowRms = Math.sqrt(sumOfSquares / rollingVelHistory.length);
+
+    const isoElem = document.getElementById('isoStatus');
+    if (isoElem) {
+        if (windowRms < 1.8) {
+            isoElem.innerHTML = "🟢 Óptimo";
+            isoElem.style.color = "#10b981"; // Verde
+        } else if (windowRms < 4.5) {
+            isoElem.innerHTML = "🟡 Aceptable";
+            isoElem.style.color = "#eab308"; // Amarillo
+        } else if (windowRms < 11.0) {
+            isoElem.innerHTML = "🟠 Alerta";
+            isoElem.style.color = "#f97316"; // Naranja
+        } else {
+            isoElem.innerHTML = "🔴 Peligro";
+            isoElem.style.color = "#ef4444"; // Rojo
+        }
+    }
+    // ------------------------------------------------------------
     
     const now = Date.now();
     if (now - last3DUpdate > CONFIG.PLOTLY_UPDATE_THROTTLE) {
@@ -546,11 +593,6 @@ if (btnExport) {
     btnExport.addEventListener('click', () => window.open('/descargar_csv', '_blank'));
 }
 
-console.log('API endpoints disponibles:');
-console.log('- /sensor_data (GET)');
-console.log('- /sensor_log/{state} (POST)');
-console.log('- /descargar_csv (GET)');
-
 setInterval(async () => {
     try {
         const res = await fetch('/sensor_data');
@@ -561,12 +603,10 @@ setInterval(async () => {
             deviceName.innerText = data.status === "Conectado" ? "WTVB01-BT50 (Conectado a PC Master)" : data.status;
         }
         
-        // 1. Candado para los botones de grabación (Solo se activan si está el WTVB01 real)
         const isConnected = (data.status === "Conectado");
         if (btnToggleLog) btnToggleLog.disabled = !isConnected;
         if (btnExport) btnExport.disabled = !isConnected;
         
-        // 2. Lógica de UI para la grabación
         if (isConnected) {
             if (data.is_logging !== isLogging) {
                 isLogging = data.is_logging;
@@ -584,7 +624,6 @@ setInterval(async () => {
             }
         }
         
-        // 3. ¡LA MAGIA! Renderizamos la UI SIEMPRE, para que el Plan B (MPU6050) pueda brillar
         renderUI(data);
         
     } catch (e) {
@@ -594,6 +633,3 @@ setInterval(async () => {
 }, CONFIG.UPDATE_INTERVAL);
 
 window.addEventListener('resize', () => oscilloscope?.draw());
-
-console.log('✅ Dashboard inicializado correctamente');
-console.log('💡 La estela TASMG ahora es persistente y con escala dinámica sensible');

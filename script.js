@@ -5,6 +5,27 @@ document.addEventListener('DOMContentLoaded', () => {
     let isPwrOn = false, isRunOn = false;
     let telemetryInterval;
     
+    // Variables Globales de Estado y Uptime
+    let sysStartTime = Date.now();
+    let motorRunTime = { A: 0, B: 0 };
+    let motorLastTick = { A: Date.now(), B: Date.now() };
+    const currentRPMs = { A: 0.0, B: 0.0 };
+    
+    // Objeto Global para Automatización
+    window.autoState = {
+        offTime: null,
+        routines: {
+            A: { active: false, step: 1, nextSwitch: 0, r1:0, s1:0, r2:0, s2:0 },
+            B: { active: false, step: 1, nextSwitch: 0, r1:0, s1:0, r2:0, s2:0 }
+        }
+    };
+
+    // NUEVO: Memoria para el Auto-Cambio de Dirección
+    let dirTimers = {
+        A: { interval: 0, lastSwitch: Date.now() },
+        B: { interval: 0, lastSwitch: Date.now() }
+    };
+
     const ui = {
         loader: document.getElementById('loader'), main: document.getElementById('main-content'),
         console: document.getElementById('console-output'),
@@ -31,6 +52,14 @@ document.addEventListener('DOMContentLoaded', () => {
         while (ui.console.children.length > 40) ui.console.removeChild(ui.console.firstChild);
         ui.console.scrollTop = ui.console.scrollHeight;
     };
+
+    function formatTime(ms) {
+        let totalSecs = Math.floor(ms / 1000);
+        let hours = Math.floor(totalSecs / 3600);
+        let mins = Math.floor((totalSecs % 3600) / 60);
+        let secs = totalSecs % 60;
+        return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
 
     const paramsConfig = [
         { k: "Arrancar", desc: "Comando de arranque activo." }, 
@@ -91,8 +120,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- BOTONES ---
-    window.togglePower = async () => {
-        let desiredState = !isPwrOn;
+    window.togglePower = async (forceState = null) => {
+        let desiredState = forceState !== null ? forceState : !isPwrOn;
         try { 
             const res = await fetch(`/motor/power/${desiredState}`, { method: 'POST' }); 
             const data = await res.json();
@@ -121,38 +150,184 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch(e){}
     };
 
-    // --- DIALES INTELIGENTES (Con Soporte para 3 Decimales y Alta Velocidad) ---
+    // NUEVA FUNCIÓN AÑADIDA: Actualiza la memoria local de la dirección automática
+    window.updateAutoDir = (m) => {
+        let val = parseInt(document.getElementById(`autoDir${m}`).value);
+        if (isNaN(val) || val < 0) val = 0;
+        dirTimers[m].interval = val;
+        dirTimers[m].lastSwitch = Date.now(); // Resetea el contador al cambiar el valor
+    };
+
+    // --- LÓGICA DE AUTOMATIZACIÓN (CRONÓMETROS) ---
+    window.toggleAutoOff = () => {
+        let mins = parseFloat(document.getElementById('autoOffMins').value);
+        let btn = document.getElementById('btnAutoOff');
+        let status = document.getElementById('statusAutoOff');
+
+        if (autoState.offTime) {
+            autoState.offTime = null;
+            btn.innerText = "Iniciar";
+            btn.style.background = "";
+            btn.style.borderColor = "var(--neon-cyan)";
+            status.innerText = "Inactivo";
+            status.style.color = "#eab308";
+        } else {
+            if (isNaN(mins) || mins <= 0) return alert("Ingrese un tiempo válido en minutos.");
+            autoState.offTime = Date.now() + (mins * 60000);
+            btn.innerText = "Cancelar Cronómetro";
+            btn.style.background = "var(--neon-red)";
+            btn.style.borderColor = "var(--neon-red)";
+            btn.style.color = "white";
+        }
+    };
+
+    window.toggleRoutine = (m) => {
+        let r = autoState.routines[m];
+        let btn = document.getElementById(`btnAuto${m}`);
+        let status = document.getElementById(`statusAuto${m}`);
+
+        if (r.active) {
+            r.active = false;
+            btn.innerText = "Activar Ciclo";
+            btn.style.background = "";
+            btn.style.borderColor = "var(--neon-cyan)";
+            btn.style.color = "var(--neon-cyan)";
+            status.innerText = "Inactivo";
+            status.style.color = "#eab308";
+        } else {
+            if(!isPwrOn || !isRunOn) return alert("Encienda el sistema (POWER) y la marcha (START) primero para automatizar los ejes.");
+            
+            r.r1 = parseFloat(document.getElementById(`ax${m}_rpm1`).value) || 0;
+            r.s1 = parseFloat(document.getElementById(`ax${m}_sec1`).value) || 0;
+            r.r2 = parseFloat(document.getElementById(`ax${m}_rpm2`).value) || 0;
+            r.s2 = parseFloat(document.getElementById(`ax${m}_sec2`).value) || 0;
+
+            if(r.s1 <= 0 || r.s2 <= 0) return alert("Los tiempos de cada fase deben ser mayores a 0 segundos.");
+
+            r.active = true;
+            r.step = 1;
+            r.nextSwitch = Date.now() + (r.s1 * 1000);
+            
+            let input = document.getElementById(`manualRpm${m}`);
+            input.value = r.r1.toFixed(3);
+            input.dispatchEvent(new Event('change'));
+
+            btn.innerText = "Detener Ciclo";
+            btn.style.background = "var(--neon-red)";
+            btn.style.borderColor = "var(--neon-red)";
+            btn.style.color = "white";
+        }
+    };
+
+    // Bucle para actualizar los relojes (UPTIME) y Rutinas (Cada 100ms)
+    setInterval(() => {
+        const now = Date.now();
+        document.getElementById('sys-uptime').innerText = `⏱️ SYS UPTIME: ${formatTime(now - sysStartTime)}`;
+        
+        ['A', 'B'].forEach(m => {
+            let isRunning = (isPwrOn && isRunOn && currentRPMs[m] > 0);
+            
+            // --- ACTUALIZACIÓN DE RELOJES DE MARCHA ---
+            if (isRunning) motorRunTime[m] += (now - motorLastTick[m]);
+            motorLastTick[m] = now;
+            
+            let timerEl = document.getElementById(`timer${m}`);
+            if(timerEl) {
+                timerEl.innerText = `⏱️ ${formatTime(motorRunTime[m])} en marcha`;
+                timerEl.style.color = isRunning ? "#00ff95" : "#71717a";
+                timerEl.style.textShadow = isRunning ? "0 0 5px rgba(0, 255, 149, 0.5)" : "none";
+            }
+
+            // --- NUEVO: EJECUCIÓN DEL AUTO CAMBIO DE DIRECCIÓN ---
+            if (isRunning && dirTimers[m].interval > 0) {
+                if (now - dirTimers[m].lastSwitch >= (dirTimers[m].interval * 1000)) {
+                    let dirSelect = document.getElementById(`dir${m}`);
+                    // Cambia visualmente en la web de Horario(1) a Antihorario(2) y viceversa
+                    dirSelect.value = dirSelect.value === "1" ? "2" : "1";
+                    
+                    // Llama a la función que actualiza todo y envía al servidor Python
+                    window.updateExtras(m); 
+                    
+                    logToConsole(`AXIS ${m === 'A' ? 'X' : 'Y'} AUTO-DIR: Cambiando a sentido ${dirSelect.value === '1' ? 'Horario' : 'Antihorario'}`, "INFO");
+                    dirTimers[m].lastSwitch = now;
+                }
+            } else {
+                // Si el motor no está corriendo o el auto-dir es 0, no sumamos tiempo de espera.
+                dirTimers[m].lastSwitch = now; 
+            }
+
+            // --- EJECUCIÓN DE RUTINAS CÍCLICAS DE VELOCIDAD ---
+            let r = autoState.routines[m];
+            if (r.active) {
+                let remain = r.nextSwitch - now;
+                if (remain <= 0) {
+                    r.step = r.step === 1 ? 2 : 1;
+                    let nextRpm = r.step === 1 ? r.r1 : r.r2;
+                    let nextSecs = r.step === 1 ? r.s1 : r.s2;
+                    r.nextSwitch = now + (nextSecs * 1000);
+                    
+                    let input = document.getElementById(`manualRpm${m}`);
+                    input.value = nextRpm.toFixed(3);
+                    input.dispatchEvent(new Event('change')); // Dispara la orden al servidor
+                    remain = nextSecs * 1000;
+                }
+                document.getElementById(`statusAuto${m}`).innerText = `Fase ${r.step} (${(r.step===1?r.r1:r.r2)} RPM) - Siguiente en ${(remain/1000).toFixed(1)}s`;
+                document.getElementById(`statusAuto${m}`).style.color = "#00ff95";
+            }
+        });
+
+        // Ejecución de Apagado Automático
+        if (autoState.offTime) {
+            let remain = autoState.offTime - now;
+            if (remain <= 0) {
+                autoState.offTime = null;
+                document.getElementById('statusAutoOff').innerText = "Sistema Apagado por Cronómetro.";
+                document.getElementById('statusAutoOff').style.color = "var(--neon-red)";
+                if (isPwrOn) window.togglePower(false); // Ordena apagar
+                
+                let btn = document.getElementById('btnAutoOff');
+                btn.innerText = "Iniciar";
+                btn.style.background = "";
+                btn.style.borderColor = "var(--neon-cyan)";
+                btn.style.color = "var(--neon-cyan)";
+            } else {
+                document.getElementById('statusAutoOff').innerText = `El sistema se apagará en: ${formatTime(remain)}`;
+                document.getElementById('statusAutoOff').style.color = "#00ff95";
+            }
+        }
+    }, 100); 
+
+    // --- DIALES INTELIGENTES ---
     function setupMotor(id) {
         const dial = document.getElementById(`dial${id === 'A' ? 'X' : 'Y'}Container`).firstElementChild;
         const needle = dial.querySelector('.dial-needle-container');
         const readout = document.getElementById(`val${id}-center`);
         const bgRotator = document.getElementById(`bgRotator${id}`);
         const manualInput = document.getElementById(`manualRpm${id}`);
-        let tAxis, isDragging = false, currentRPM = 0.0;
+        let tAxis, isDragging = false;
+        let lastTheta = null; 
 
-        // Limita la velocidad de rotación visual de la interfaz para que no parpadee si va a 5000 RPM
         setInterval(() => { 
-            let visualRpm = currentRPM > 100 ? 100 : currentRPM; 
+            let visualRpm = currentRPMs[id] > 100 ? 100 : currentRPMs[id]; 
             bgRotator.style.animationDuration = (isPwrOn && isRunOn && visualRpm > 0) ? `${20/visualRpm}s` : '0s'; 
         }, 100);
 
         const updateDialUI = (rpm, sendToServer = true) => {
-            currentRPM = parseFloat(rpm); 
+            currentRPMs[id] = parseFloat(rpm); 
             
-            // Limitamos a 1 decimal visual en el centro del dial interactivo por espacio
-            readout.innerText = currentRPM > 999 ? currentRPM.toFixed(0) : currentRPM.toFixed(1); 
+            readout.innerText = currentRPMs[id] > 999 ? currentRPMs[id].toFixed(0) : currentRPMs[id].toFixed(1); 
             
             if (manualInput && document.activeElement !== manualInput) {
-                manualInput.value = currentRPM.toFixed(3);
+                manualInput.value = currentRPMs[id].toFixed(3);
             }
             
-            needle.style.transform = `rotate(${(currentRPM/10)*360}deg)`;
+            needle.style.transform = `rotate(${(currentRPMs[id]/10)*360}deg)`;
             
             if (sendToServer) {
                 clearTimeout(tAxis); 
                 tAxis = setTimeout(async () => {
                     try {
-                        const res = await fetch(`/control/${id}/${currentRPM.toFixed(3)}`, { method: 'POST' });
+                        const res = await fetch(`/control/${id}/${currentRPMs[id].toFixed(3)}`, { method: 'POST' });
                         const data = await res.json();
                         if (data.status === "DENIED") updateDialUI(0, false); 
                     } catch(e){}
@@ -160,50 +335,52 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        // Lógica de Entrada Manual - Ahora soporta hasta 5000 RPM
         if (manualInput) {
             manualInput.addEventListener('change', (e) => {
                 let val = parseFloat(e.target.value);
                 if (isNaN(val)) val = 0.0;
                 if (val < 0) val = 0.0;
-                if (val > 5000) val = 5000.0; // Límite industrial elevado
+                if (val > 5000) val = 5000.0;
                 
                 e.target.value = val.toFixed(3);
                 updateDialUI(val, true); 
             });
-            
             manualInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') manualInput.blur();
             });
         }
 
-        // Lógica de arrastre de la aguja
         const onMove = (e) => {
-            if (!isDragging) return; e.preventDefault();
+            if (!isDragging) return; 
+            e.preventDefault();
             const rect = dial.getBoundingClientRect(), cx = rect.left + rect.width/2, cy = rect.top + rect.height/2;
             let theta = Math.atan2((e.touches?e.touches[0].clientY:e.clientY)-cy, (e.touches?e.touches[0].clientX:e.clientX)-cx)*180/Math.PI + 90;
             if (theta < 0) theta += 360;
             
-            // Calculamos el arrastre. Si el usuario ya metió un número alto (ej. 1500), 
-            // el dial afectará solamente la franja de los últimos 10 RPM.
-            let fractionalRpm = (theta / 360) * 10;
-            let baseRpm = Math.floor(currentRPM / 10) * 10;
-            
-            // Control de desbordamiento circular 
-            let prevFractional = currentRPM % 10;
-            if (prevFractional > 8.0 && fractionalRpm < 2.0) fractionalRpm = 10.0;
-            else if (prevFractional < 2.0 && fractionalRpm > 8.0) fractionalRpm = 0.0;
-            if (fractionalRpm >= 9.8) fractionalRpm = 10.0;
-            if (fractionalRpm <= 0.2) fractionalRpm = 0.0;
+            if (lastTheta !== null) {
+                let delta = theta - lastTheta;
+                if (delta > 180) delta -= 360;
+                else if (delta < -180) delta += 360;
 
-            let newRPM = baseRpm + fractionalRpm;
-            if (newRPM > 5000) newRPM = 5000.0;
+                let newRPM = currentRPMs[id] + (delta / 360) * 10;
+                
+                if (newRPM < 0) newRPM = 0.0;
+                if (newRPM > 5000) newRPM = 5000.0;
 
-            updateDialUI(newRPM, true);
+                updateDialUI(newRPM, true);
+            }
+            lastTheta = theta; 
         };
 
-        dial.addEventListener('mousedown', () => isDragging = true); window.addEventListener('mouseup', () => isDragging = false); window.addEventListener('mousemove', onMove);
-        dial.addEventListener('touchstart', () => isDragging = true, {passive:false}); window.addEventListener('touchend', () => isDragging = false); window.addEventListener('touchmove', onMove, {passive:false});
+        const resetDrag = () => { isDragging = false; lastTheta = null; };
+
+        dial.addEventListener('mousedown', (e) => { isDragging = true; lastTheta = null; onMove(e); }); 
+        window.addEventListener('mouseup', resetDrag); 
+        window.addEventListener('mousemove', onMove);
+        
+        dial.addEventListener('touchstart', (e) => { isDragging = true; lastTheta = null; onMove(e); }, {passive:false}); 
+        window.addEventListener('touchend', resetDrag); 
+        window.addEventListener('touchmove', onMove, {passive:false});
         
         window.addEventListener('resetDials', () => updateDialUI(0, false)); 
         updateDialUI(0, false);
@@ -260,5 +437,32 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('torqueB').value = "0.0";
         document.getElementById('mvA').value = "0.0";
         document.getElementById('mvB').value = "0.0";
+        
+        // Reset del AUTO DIR
+        document.getElementById('autoDirA').value = "0";
+        document.getElementById('autoDirB').value = "0";
+        window.updateAutoDir('A');
+        window.updateAutoDir('B');
+
+        // Detener todas las rutinas de automatización por seguridad
+        ['A', 'B'].forEach(m => {
+            if(autoState.routines[m].active) window.toggleRoutine(m);
+        });
+        if(autoState.offTime) window.toggleAutoOff();
+        
+        // Reset de los cronómetros locales
+        motorRunTime = { A: 0, B: 0 };
     };
+});
+
+document.querySelector('.automation-header').addEventListener('click', function() {
+    const body = document.getElementById('autoBody');
+    body.classList.toggle('show');
+    
+    // Activar/desactivar scroll según el estado del panel
+    if (body.classList.contains('show')) {
+        document.body.style.overflowY = 'auto';
+    } else {
+        document.body.style.overflowY = 'hidden';
+    }
 });
